@@ -28,106 +28,66 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Search,
+  ShieldAlert,
   Mail,
   AlertTriangle,
-  Cpu,
+  Check,
   CheckCircle2,
+  UserCheck,
   X,
-  ArrowDown,
+  Clock,
+  RefreshCw,
+  Users,
+  Activity,
+  Ticket,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useStore } from "../hooks/useStore";
 import { cn, formatDateTime, timeAgo } from "../lib/utils";
-import { auth } from "../services/api";
+import { api } from "../services/api";
+import type { Incident, IncidentEvent } from "../types";
 
 // ─────────────────────────────────────────────────────────────────────
-// Types & Interfaces
+// Helpers
 // ─────────────────────────────────────────────────────────────────────
 
 type FilterTab = "open" | "all" | "closed";
 
-interface IncidentListItem {
-  pipeline_id: number;
-  pipeline_name: string;
-  run_id: number;
-  latest_status: string;
-  is_escalated: boolean;
-  last_activity: string;
-  cycle_count: number;
-  pipeline_status: string;
-  incident_status: string | null;
-  resolved_at: string | null;
+const OPEN_STATUSES = new Set([
+  "Detected",
+  "Reasoning",
+  "Planning",
+  "Awaiting Approval",
+  "Processing", // NEW — acknowledged but not yet resolved
+  "Executing",
+  "Evaluating",
+]);
+
+function isOpen(i: Incident): boolean {
+  return i.is_active !== false;
 }
 
-interface Step1Detail {
-  step: number;
-  title: string;
-  pipeline_name: string;
-  summary: string;
-  detection_time: string;
+function isClosed(i: Incident): boolean {
+  return i.is_active === false;
 }
 
-interface Recipient {
-  email: string;
-  role: string;
-  status: string;
-}
-
-interface NotificationCycle {
-  cycle_number: number;
-  sent_at: string;
-  recipients: Recipient[];
-}
-
-interface Step2Detail {
-  step: number;
-  title: string;
-  cycles: NotificationCycle[];
-}
-
-interface Step3Detail {
-  step: number;
-  title: string;
-  status: string;
-  new_run_found: boolean;
-  cycles: NotificationCycle[];
-}
-
-interface Step4Detail {
-  step: number;
-  title: string;
-  pipeline_status: string;
-  incident_status: string | null;
-  resolved_at: string | null;
-}
-
-interface IncidentDetail {
-  pipeline_id: number;
-  pipeline_name: string;
-  run_id: number;
-  is_escalated: boolean;
-  step1: Step1Detail;
-  step2: Step2Detail;
-  step3: Step3Detail;
-  step4: Step4Detail;
+/** Pull the most useful one-line summary from whatever the backend filled in. */
+function bestSummary(i: Incident): string {
+  return (
+    i.agent_thought ||
+    i.proposed_action ||
+    i.root_cause ||
+    i.error_log?.split("\n")[0] ||
+    "Awaiting diagnosis…"
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Helper Functions
-// ─────────────────────────────────────────────────────────────────────
-
-function isListItemOpen(item: IncidentListItem): boolean {
-  return !item.resolved_at && item.pipeline_status !== "SUCCEEDED";
-}
-
-function isListItemClosed(item: IncidentListItem): boolean {
-  return !!item.resolved_at || item.pipeline_status === "SUCCEEDED";
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// Main Component
+// Component
 // ─────────────────────────────────────────────────────────────────────
 
 export function IncidentsPage() {
+  const { state } = useStore();
   const { id: routeId } = useParams();
   const navigate = useNavigate();
 
@@ -135,137 +95,41 @@ export function IncidentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(routeId ?? null);
 
-  const [incidents, setIncidents] = useState<IncidentListItem[]>([]);
-  const [selectedDetail, setSelectedDetail] = useState<IncidentDetail | null>(null);
-  const [loadingList, setLoadingList] = useState(true);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [errorList, setErrorList] = useState<string | null>(null);
-  const [errorDetail, setErrorDetail] = useState<string | null>(null);
-
-  // Fetch the incidents list from REST API
-  const fetchList = async () => {
-    setLoadingList(true);
-    setErrorList(null);
-    try {
-      const headers: Record<string, string> = {};
-      const token = auth.getToken();
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      const response = await fetch("/api/v1/timeline/incidents", { headers });
-      if (response.status === 401) {
-        auth.clearToken();
-        navigate("/login");
-        return;
-      }
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.statusText}`);
-      }
-      const data = await response.json();
-      setIncidents(data);
-    } catch (err: any) {
-      setErrorList(err.message || "An error occurred while fetching the incidents list.");
-    } finally {
-      setLoadingList(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchList();
-  }, []);
-
-  // Fetch detail whenever selectedId changes
-  useEffect(() => {
-    if (!selectedId) {
-      setSelectedDetail(null);
-      return;
-    }
-    let active = true;
-    async function fetchDetail() {
-      setLoadingDetail(true);
-      setErrorDetail(null);
-      try {
-        const headers: Record<string, string> = {};
-        const token = auth.getToken();
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-        const response = await fetch(`/api/v1/timeline/incidents/${selectedId}`, { headers });
-        if (response.status === 401) {
-          auth.clearToken();
-          navigate("/login");
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(`Failed to fetch timeline details: ${response.statusText}`);
-        }
-        const data = await response.json();
-        if (active) {
-          setSelectedDetail(data);
-        }
-      } catch (err: any) {
-        if (active) {
-          setErrorDetail(err.message || "An error occurred while fetching timeline details.");
-          setSelectedDetail(null);
-        }
-      } finally {
-        if (active) {
-          setLoadingDetail(false);
-        }
-      }
-    }
-    fetchDetail();
-    return () => {
-      active = false;
-    };
-  }, [selectedId]);
-
-  // Keep state sync'd when routeId changes externally
-  useEffect(() => {
-    if (routeId) {
-      setSelectedId(routeId);
-    }
-  }, [routeId]);
-
-  // Filtered list (memoized — recomputes only when filter/search/incidents change)
+  // Filtered list (memoised — recomputes only when filter/search/data change)
   const filtered = useMemo(() => {
-    let list = [...incidents];
-    if (filter === "open") list = list.filter(isListItemOpen);
-    if (filter === "closed") list = list.filter(isListItemClosed);
+    let list = [...(state.incidents || [])];
+    if (filter === "open") list = list.filter(isOpen);
+    if (filter === "closed") list = list.filter(isClosed);
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
         (i) =>
           i.pipeline_name?.toLowerCase().includes(q) ||
-          String(i.pipeline_id).includes(q) ||
-          String(i.run_id).includes(q) ||
-          i.incident_status?.toLowerCase().includes(q) ||
-          i.pipeline_status?.toLowerCase().includes(q),
+          String(i.id).includes(q) ||
+          bestSummary(i).toLowerCase().includes(q),
       );
     }
 
-    // Sort by last_activity newest first
+    // Newest first
     list.sort(
       (a, b) =>
-        new Date(b.last_activity).getTime() -
-        new Date(a.last_activity).getTime(),
+        new Date(b.detected_at).getTime() - new Date(a.detected_at).getTime(),
     );
     return list;
-  }, [incidents, filter, searchQuery]);
+  }, [state.incidents, filter, searchQuery]);
 
-  // Auto-select first matching incident if nothing is selected or current selection no longer matches
+  // Auto-select first matching incident if nothing is selected (or the
+  // current selection no longer matches the filter).
   useEffect(() => {
     if (filtered.length === 0) {
       setSelectedId(null);
       return;
     }
     const stillThere = filtered.some(
-      (i) => String(i.pipeline_id) === String(selectedId),
+      (i) => String(i.id) === String(selectedId),
     );
-    if (!stillThere) {
-      setSelectedId(String(filtered[0].pipeline_id));
-    }
+    if (!stillThere) setSelectedId(String(filtered[0].id));
   }, [filtered, selectedId]);
 
   // Keep the URL in sync with the selection
@@ -275,9 +139,17 @@ export function IncidentsPage() {
     }
   }, [selectedId, routeId, navigate]);
 
+  const selected = useMemo(
+    () =>
+      (state.incidents || []).find(
+        (i) => String(i.id) === String(selectedId),
+      ) || null,
+    [state.incidents, selectedId],
+  );
+
   return (
     <div className="flex-1 flex min-h-0 bg-[#F9FAFB]">
-      {/* ─── LEFT: Filter + Incident List ───────────────────────────── */}
+      {/* ─── LEFT: filter + incident list ───────────────────────────── */}
       <aside className="w-[340px] shrink-0 border-r border-[#E5E7EB] bg-white flex flex-col">
         {/* Filter pills */}
         <div className="p-4 border-b border-[#E5E7EB]">
@@ -309,53 +181,25 @@ export function IncidentsPage() {
             />
           </div>
           <div className="text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] mt-3">
-            {loadingList ? "LOADING..." : `${filtered.length} INCIDENT${filtered.length === 1 ? "" : "S"}`}
+            {filtered.length} INCIDENT{filtered.length === 1 ? "" : "S"}
           </div>
         </div>
 
-        {/* List content */}
+        {/* List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {loadingList ? (
-            <div className="p-4 space-y-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="animate-pulse bg-gray-50 border border-[#E5E7EB] rounded-xl p-4 space-y-3">
-                  <div className="flex justify-between">
-                    <div className="h-2.5 bg-gray-200 rounded w-16" />
-                    <div className="h-4 bg-gray-200 rounded-full w-12" />
-                  </div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
-                  <div className="flex justify-between pt-1">
-                    <div className="h-4 bg-gray-200 rounded w-16" />
-                    <div className="h-3 bg-gray-200 rounded w-10" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : errorList ? (
-            <div className="p-6 text-center text-xs text-rose-600 bg-rose-50 border-y border-rose-100">
-              <p className="font-bold">Error Loading Incidents</p>
-              <p className="mt-1 text-[11px] text-rose-500 leading-normal">{errorList}</p>
-              <button 
-                onClick={fetchList}
-                className="mt-3 px-3 py-1 bg-white text-rose-700 hover:bg-rose-100 border border-rose-200 rounded text-[10px] font-bold uppercase transition-colors"
-              >
-                Retry
-              </button>
-            </div>
-          ) : filtered.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="p-8 text-center text-xs text-[#9CA3AF]">
               No incidents match this filter.
             </div>
           ) : (
             <ul className="divide-y divide-[#F3F4F6]">
               {filtered.map((inc) => {
-                const active = String(inc.pipeline_id) === String(selectedId);
-                const isItemClosedStatus = isListItemClosed(inc);
+                const active = String(inc.id) === String(selectedId);
+                const summary = bestSummary(inc);
                 return (
-                  <li key={inc.pipeline_id}>
+                  <li key={inc.id}>
                     <button
-                      onClick={() => setSelectedId(String(inc.pipeline_id))}
+                      onClick={() => setSelectedId(String(inc.id))}
                       className={cn(
                         "w-full text-left p-4 transition-colors relative",
                         active ? "bg-[#F3F4F6]" : "hover:bg-[#F9FAFB]",
@@ -366,19 +210,47 @@ export function IncidentsPage() {
                       )}
                       <div className="flex items-start justify-between gap-2 mb-1.5">
                         <span className="text-[10px] font-bold text-[#6B7280]">
-                          Pipeline #{inc.pipeline_id}
+                          #{inc.id}
                         </span>
-                        {inc.is_escalated && (
-                          <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-rose-50 text-rose-700">
-                            Escalated
-                          </span>
-                        )}
+                        <span
+                          className={cn(
+                            "text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
+                            inc.risk_tier === "High"
+                              ? "bg-rose-50 text-rose-700"
+                              : inc.risk_tier === "Medium"
+                                ? "bg-amber-50 text-amber-700"
+                                : "bg-emerald-50 text-emerald-700",
+                          )}
+                        >
+                          {inc.risk_tier}
+                        </span>
                       </div>
                       <div className="text-[13px] font-bold text-[#111827] truncate">
                         {inc.pipeline_name}
                       </div>
-                      <div className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">
-                        Run #{inc.run_id} • {inc.cycle_count} cycle{inc.cycle_count === 1 ? "" : "s"}
+                      <div className="text-[11px] text-[#6B7280] mt-1 leading-relaxed line-clamp-2">
+                        {summary}
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <span
+                          className={cn(
+                            "text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
+                            inc.status === "Remediated"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : inc.status === "Escalated"
+                                ? "bg-rose-50 text-rose-700"
+                                : inc.status === "Failed"
+                                  ? "bg-gray-100 text-gray-600"
+                                  : inc.status === "Processing"
+                                    ? "bg-amber-50 text-amber-700"
+                                    : "bg-blue-50 text-blue-700",
+                          )}
+                        >
+                          {inc.status}
+                        </span>
+                        <span className="text-[10px] text-[#9CA3AF] font-medium">
+                          {timeAgo(inc.detected_at)}
+                        </span>
                       </div>
                     </button>
                   </li>
@@ -389,62 +261,14 @@ export function IncidentsPage() {
         </div>
       </aside>
 
-      {/* ─── RIGHT: Timeline Pane ───────────────────────────────────── */}
+      {/* ─── RIGHT: timeline pane ───────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto custom-scrollbar p-8">
-        {loadingDetail ? (
-          <div className="max-w-3xl mx-auto space-y-8 animate-pulse">
-            <div className="border-b border-[#E5E7EB] pb-6 space-y-3">
-              <div className="h-6 bg-gray-200 rounded w-1/3" />
-              <div className="h-4 bg-gray-200 rounded w-1/2" />
-            </div>
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="space-y-4">
-                <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div className="space-y-2">
-                      <div className="h-3 bg-gray-200 rounded w-16" />
-                      <div className="h-5 bg-gray-200 rounded w-48" />
-                    </div>
-                    <div className="h-6 bg-gray-200 rounded-full w-20" />
-                  </div>
-                  <div className="h-4 bg-gray-200 rounded w-full" />
-                  <div className="h-4 bg-gray-200 rounded w-5/6" />
-                </div>
-                {step < 3 && (
-                  <div className="flex justify-center py-1">
-                    <div className="w-1.5 h-6 bg-gray-100 rounded" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : errorDetail ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-8 max-w-md mx-auto">
-            <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 mb-4 border border-rose-100">
-              <X className="w-6 h-6" />
-            </div>
-            <h3 className="text-sm font-bold text-[#111827]">Failed to Load Timeline</h3>
-            <p className="text-xs text-[#6B7280] mt-1 leading-relaxed">
-              {errorDetail}
-            </p>
-            <button 
-              onClick={() => {
-                if (selectedId) {
-                  setSelectedId(null);
-                  setTimeout(() => setSelectedId(selectedId), 50);
-                }
-              }}
-              className="mt-4 px-4 py-1.5 bg-[#111827] text-white hover:bg-gray-800 rounded-lg text-xs font-bold transition-colors"
-            >
-              Retry Connection
-            </button>
-          </div>
-        ) : !selectedDetail ? (
+        {!selected ? (
           <div className="h-full flex items-center justify-center text-sm text-[#9CA3AF]">
             Select an incident on the left to inspect its timeline.
           </div>
         ) : (
-          <TimelineView detail={selectedDetail} />
+          <TimelineView incident={selected} />
         )}
       </main>
     </div>
@@ -452,325 +276,370 @@ export function IncidentsPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Timeline View Component (Step-by-step layout)
+// Right-pane: the three-step timeline
 // ─────────────────────────────────────────────────────────────────────
 
 interface TimelineViewProps {
-  detail: IncidentDetail;
+  incident: Incident;
 }
 
-function TimelineView({ detail }: TimelineViewProps) {
-  const isResolved = !!detail.step4.resolved_at || detail.step4.pipeline_status === "SUCCEEDED";
-  const resolvedDisplayTime = detail.step4.resolved_at || detail.step1.detection_time;
+function TimelineView({ incident }: TimelineViewProps) {
+  const [loadingAction, setLoadingAction] = useState<"approve" | "reject" | null>(null);
+
+  const handleApprove = async () => {
+    setLoadingAction("approve");
+    try {
+      await api.approveIncident(String(incident.id));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleReject = async () => {
+    setLoadingAction("reject");
+    try {
+      await api.rejectIncident(String(incident.id));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAction(null);
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto">
-      {/* Header */}
+      {/* Header strip */}
       <div className="mb-6 pb-4 border-b border-[#E5E7EB]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-[#111827]">
-              {detail.pipeline_name}
+              {incident.pipeline_name}
             </h2>
             <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]">
-              <span>Pipeline #{detail.pipeline_id}</span>
+              <span>Incident #{incident.id}</span>
               <span>·</span>
-              <span>Run #{detail.run_id}</span>
+              <span>{formatDateTime(incident.detected_at)}</span>
               <span>·</span>
               <span
                 className={cn(
                   "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                  isResolved
+                  incident.status === "Remediated"
                     ? "bg-emerald-100 text-emerald-700"
-                    : detail.is_escalated
+                    : incident.status === "Escalated"
                       ? "bg-rose-100 text-rose-700"
-                      : "bg-blue-100 text-blue-700",
+                      : incident.status === "Processing"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-blue-100 text-blue-700",
                 )}
               >
-                {isResolved ? "SUCCEEDED" : detail.step4.incident_status || detail.step4.pipeline_status || "ACTIVE"}
+                {incident.status}
               </span>
+              {incident.acknowledged_at && (
+                <>
+                  <span>·</span>
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 inline-flex items-center gap-1"
+                    title={`Acknowledged at ${formatDateTime(incident.acknowledged_at)}`}
+                  >
+                    <UserCheck className="w-3 h-3" /> Acknowledged
+                  </span>
+                </>
+              )}
+              {incident.jira_ticket_key && (
+                <>
+                  <span>·</span>
+                  <a
+                    href={incident.jira_ticket_url || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-bold tracking-wider text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded inline-flex items-center hover:bg-blue-100 transition-colors"
+                  >
+                    <Ticket className="w-3 h-3 mr-1" />
+                    Jira: {incident.jira_ticket_key}
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Steps Path */}
-      <div className="relative space-y-2">
-        {/* Step 1: Incident Detection */}
-        <div>
-          <Step
-            index={1}
-            title={detail.step1.title || "Incident Detection"}
-            source={{ kind: "System", icon: Cpu }}
-            tone="default"
-          >
-            <Line label="Issue Summary" value={detail.step1.summary} />
-            <Line
-              label="Detection Time"
-              value={formatDateTime(detail.step1.detection_time)}
-            />
-            <Line label="Pipeline Name" value={detail.step1.pipeline_name} />
-            <Line label="Pipeline ID" value={String(detail.pipeline_id)} />
-            <Line label="Run ID" value={String(detail.run_id)} />
-          </Step>
-          <ConnectorLine />
-        </div>
-
-        {/* Step 2: Initial Notification */}
-        <div>
-          {detail.step2.cycles && detail.step2.cycles.length > 0 ? (
-            <Step
-              index={2}
-              title={detail.step2.title || "Initial Notification"}
-              source={{ kind: "Mailer", icon: Mail }}
-              tone="default"
+      
+      {incident.status === "Awaiting Approval" && (
+        <div className="mb-6 p-5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-amber-900 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Human Approval Required
+            </h3>
+            <p className="text-xs text-amber-700 mt-1">
+              This incident has a remediation plan ready but requires authorization to proceed.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleReject}
+              disabled={!!loadingAction}
+              className="px-4 py-2 text-xs font-bold text-amber-700 bg-white border border-amber-200 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-colors"
             >
-              <div className="space-y-3.5">
-                {detail.step2.cycles.map((cycle) => (
-                  <div key={cycle.cycle_number} className="border border-[#E5E7EB] bg-white rounded-xl p-3.5 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-[#F3F4F6] pb-2 mb-3">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#111827]">
-                        Notification Cycle {cycle.cycle_number}
-                      </span>
-                      <span className="text-[10px] font-mono text-[#9CA3AF]">
-                        {formatDateTime(cycle.sent_at)}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {cycle.recipients.map((r, idx) => (
-                        <div key={idx} className="border border-[#E5E7EB] bg-gray-50/50 rounded-lg p-2.5 flex flex-col justify-between">
-                          <div>
-                            <div className="text-[9px] font-bold uppercase tracking-wider text-[#6B7280]">
-                              {r.role}
-                            </div>
-                            <div className="text-[11px] font-mono text-[#111827] truncate mt-0.5" title={r.email}>
-                              {r.email}
-                            </div>
-                          </div>
-                          <div className="mt-2.5 flex items-center justify-between">
-                            <span className={cn(
-                              "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full inline-flex items-center gap-1",
-                              r.status === "sent" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
-                            )}>
-                              <span className={cn("w-1 h-1 rounded-full", r.status === "sent" ? "bg-emerald-500" : "bg-rose-500")} />
-                              {r.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Step>
-          ) : (
-            <PlaceholderStep
-              index={2}
-              title={detail.step2.title || "Initial Notification"}
-              note="Awaiting initial mail notifications to dispatch."
-            />
-          )}
-          <ConnectorLine />
-        </div>
-
-        {/* Step 3: Escalation */}
-        <div>
-          {detail.step3.cycles && detail.step3.cycles.length > 0 ? (
-            <Step
-              index={3}
-              title={detail.step3.title || "Escalation"}
-              source={{ kind: "System", icon: AlertTriangle }}
-              tone="alert"
+              {loadingAction === "reject" ? "Rejecting..." : "Reject"}
+            </button>
+            <button
+              onClick={handleApprove}
+              disabled={!!loadingAction}
+              className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
             >
-              <div className="space-y-3.5">
-                {detail.step3.cycles.map((cycle) => (
-                  <div key={cycle.cycle_number} className="border border-rose-200 bg-white rounded-xl p-3.5 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-rose-100 pb-2 mb-3">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-rose-700">
-                        Escalation Cycle {cycle.cycle_number}
-                      </span>
-                      <span className="text-[10px] font-mono text-[#9CA3AF]">
-                        {formatDateTime(cycle.sent_at)}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {cycle.recipients.map((r, idx) => (
-                        <div key={idx} className="border border-[#E5E7EB] bg-gray-50/50 rounded-lg p-2.5 flex flex-col justify-between">
-                          <div>
-                            <div className="text-[9px] font-bold uppercase tracking-wider text-[#6B7280]">
-                              {r.role}
-                            </div>
-                            <div className="text-[11px] font-mono text-[#111827] truncate mt-0.5" title={r.email}>
-                              {r.email}
-                            </div>
-                          </div>
-                          <div className="mt-2.5 flex items-center justify-between">
-                            <span className={cn(
-                              "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full inline-flex items-center gap-1",
-                              r.status === "sent" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
-                            )}>
-                              <span className={cn("w-1 h-1 rounded-full", r.status === "sent" ? "bg-emerald-500" : "bg-rose-500")} />
-                              {r.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Step>
-          ) : (
-            <PlaceholderStep
-              index={3}
-              title={detail.step3.title || "Escalation"}
-              note={isResolved ? "Escalation not required (Pipeline resolved within initial SLA)." : "Will dispatch automatically if the SLA window expires without resolution."}
-            />
-          )}
-          <ConnectorLine />
+              {loadingAction === "approve" ? "Approving..." : "Approve & Execute"}
+            </button>
+          </div>
         </div>
-
-        {/* Step 4: Resolution */}
-        <div>
-          <Step
-            index={4}
-            title={detail.step4.title || "Resolution"}
-            source={{ kind: "System", icon: CheckCircle2 }}
-            tone={isResolved ? "success" : "default"}
-          >
-            {isResolved ? (
-              <div className="border border-emerald-200 bg-emerald-50/30 rounded-xl p-3.5 text-xs text-emerald-800 leading-relaxed">
-                <p className="font-bold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Pipeline Resolved
-                </p>
-                <p className="mt-1">
-                  The issue has been completely remediated. Successful pipeline completion was detected and verified at <span className="font-mono font-bold text-[#111827]">{formatDateTime(resolvedDisplayTime)}</span>.
-                </p>
-              </div>
-            ) : (
-              <div className="border border-[#E5E7EB] bg-gray-50/50 rounded-xl p-3.5 text-xs text-[#6B7280] leading-relaxed">
-                <p className="font-bold flex items-center gap-1.5 text-[#374151]">
-                  SLA Active & Monitoring
-                </p>
-                <p className="mt-1">
-                  Timeline remains open. Awaiting a successful pipeline run execution or manual engineer intervention to verify resolution.
-                </p>
-                <div className="mt-3 flex gap-4 text-[10px] uppercase font-bold tracking-wider">
-                  <div>
-                    Pipeline: <span className="text-rose-600">{detail.step4.pipeline_status || "FAILED"}</span>
-                  </div>
-                  <div>
-                    Incident: <span className="text-amber-600">{detail.step4.incident_status || "ACTIVE"}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </Step>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// Step Layout Helper Components
-// ─────────────────────────────────────────────────────────────────────
-
-interface StepProps {
-  index: number;
-  title: string;
-  source: { kind: string; icon: any };
-  tone: "default" | "alert" | "success";
-  children: React.ReactNode;
-}
-
-function Step({ index, title, source, tone, children }: StepProps) {
-  const Icon = source.icon;
-  return (
-    <motion.section
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18 }}
-      className={cn(
-        "relative bg-white border rounded-2xl p-5 shadow-sm",
-        tone === "alert"
-          ? "border-rose-200 bg-rose-50/30"
-          : tone === "success"
-            ? "border-emerald-200 bg-emerald-50/30"
-            : "border-[#E5E7EB]",
       )}
-    >
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div>
-          <div className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
-            Step {index}
-          </div>
-          <h3 className="text-base font-bold text-[#111827] mt-1">
-            {title}
-          </h3>
-        </div>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md",
-            source.kind === "Mailer"
-              ? "bg-blue-50 text-blue-700"
-              : tone === "alert"
-                ? "bg-rose-50 text-rose-700"
-                : tone === "success"
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-[#F3F4F6] text-[#6B7280]",
-          )}
-        >
-          <Icon className="w-3 h-3" /> {source.kind}
-        </span>
-      </div>
-      <div className="space-y-1.5">{children}</div>
-    </motion.section>
-  );
-}
 
-function PlaceholderStep({
-  index,
-  title,
-  note,
-}: {
-  index: number;
-  title: string;
-  note: string;
-}) {
-  return (
-    <section className="relative bg-white border border-dashed border-[#E5E7EB] rounded-2xl p-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
-            Step {index}
-          </div>
-          <h3 className="text-sm font-bold text-[#9CA3AF] mt-1">
-            {title}
-          </h3>
-        </div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] bg-[#F3F4F6] px-2 py-1 rounded-md">
-          Pending
-        </span>
-      </div>
-      <p className="text-xs text-[#9CA3AF] mt-2 leading-relaxed">{note}</p>
-    </section>
-  );
-}
-
-function ConnectorLine() {
-  return (
-    <div className="flex justify-center py-1.5">
-      <ArrowDown size={20} strokeWidth={3} className="text-[#D1D5DB]" />
+      {/* Journey Timeline */}
+      <JourneyTimeline incidentId={incident.id} />
     </div>
   );
 }
 
-function Line({ label, value }: { label: string; value: string }) {
+// ─────────────────────────────────────────────────────────────────────
+// NEW: Incident Lifecycle Journey Timeline Component
+// ─────────────────────────────────────────────────────────────────────
+
+interface JourneyTimelineProps {
+  incidentId: string | number;
+}
+
+function JourneyTimeline({ incidentId }: JourneyTimelineProps) {
+  const [events, setEvents] = useState<IncidentEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { state } = useStore();
+
+  const fetchEvents = async () => {
+    try {
+      const data = await api.incidentEvents(incidentId);
+      setEvents(data);
+    } catch (err) {
+      console.warn("Failed to fetch incident events:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    fetchEvents();
+    // Poll events every 15s to capture automatic escalations as they occur
+    const t = setInterval(fetchEvents, 15000);
+    return () => clearInterval(t);
+  }, [incidentId]);
+
+  // Also refetch if the global store's incident status changes (e.g. approved / rejected)
+  const currentIncidentStatus = useMemo(() => {
+    const inc = state.incidents.find(
+      (i) => String(i.id) === String(incidentId),
+    );
+    return inc?.status;
+  }, [state.incidents, incidentId]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [currentIncidentStatus]);
+
+  if (loading && events.length === 0) {
+    return (
+      <div className="mt-6 p-6 bg-white border border-[#E5E7EB] rounded-2xl shadow-sm text-center">
+        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900 mx-auto"></div>
+        <p className="text-xs text-[#6B7280] mt-2">
+          Loading incident event journey...
+        </p>
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return null; // Don't render anything if no events exist yet
+  }
+
+  // Map each event type to a gorgeous tone, title, and Lucide icon
+  const getEventConfig = (type: string) => {
+    switch (type) {
+      case "PIPELINE_FAILED":
+        return {
+          title: "Pipeline Failure Detected",
+          icon: ShieldAlert,
+          bg: "bg-rose-50 border-rose-200 text-rose-700",
+          iconBg: "bg-rose-100 text-rose-700",
+        };
+      case "INITIAL_MAIL_SENT":
+        return {
+          title: "Initial Alert Dispatched (L1)",
+          icon: Mail,
+          bg: "bg-blue-50/50 border-blue-200 text-blue-700",
+          iconBg: "bg-blue-100 text-blue-700",
+        };
+      case "ESCALATION_CHECK":
+        return {
+          title: "SLA Check Performed",
+          icon: Clock,
+          bg: "bg-slate-50 border-slate-200 text-slate-700",
+          iconBg: "bg-slate-100 text-slate-700",
+        };
+      case "ESCALATION_MAIL_SENT":
+        return {
+          title: "Incident Escalated (L1+L2+L3)",
+          icon: AlertTriangle,
+          bg: "bg-amber-50 border-amber-200 text-amber-700",
+          iconBg: "bg-amber-100 text-amber-700",
+        };
+      case "RERUN_DETECTED":
+        return {
+          title: "Pipeline Rerun Detected",
+          icon: RefreshCw,
+          bg: "bg-violet-50 border-violet-200 text-violet-700",
+          iconBg: "bg-violet-100 text-violet-700",
+        };
+      case "RERUN_SUCCEEDED":
+        return {
+          title: "Rerun Succeeded",
+          icon: CheckCircle2,
+          bg: "bg-emerald-50 border-emerald-200 text-emerald-700",
+          iconBg: "bg-emerald-100 text-emerald-700",
+        };
+      case "RERUN_FAILED":
+        return {
+          title: "Rerun Failed",
+          icon: X,
+          bg: "bg-rose-50 border-rose-200 text-rose-700",
+          iconBg: "bg-rose-100 text-rose-700",
+        };
+      case "RESOLVED":
+        return {
+          title: "Incident Resolved",
+          icon: Check,
+          bg: "bg-emerald-50 border-emerald-200 text-emerald-700",
+          iconBg: "bg-emerald-100 text-emerald-700",
+        };
+      case "JIRA_TICKET_CREATED":
+        return {
+          title: "Jira Ticket Created",
+          icon: Ticket,
+          bg: "bg-blue-50 border-blue-200 text-blue-700",
+          iconBg: "bg-blue-100 text-blue-700",
+        };
+      default:
+        return {
+          title: type.replace(/_/g, " "),
+          icon: Activity,
+          bg: "bg-gray-50 border-gray-200 text-gray-700",
+          iconBg: "bg-gray-100 text-gray-700",
+        };
+    }
+  };
+
   return (
-    <div className="text-xs text-[#374151] leading-relaxed">
-      <span className="text-[#6B7280]">{label}:</span>{" "}
-      <span className="text-[#111827] font-medium">{value}</span>
+    <div className="mt-6 border border-[#E5E7EB] bg-white rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-4 mb-6">
+        <div>
+          <h3 className="text-base font-bold text-[#111827]">
+            Incident Lifecycle Journey
+          </h3>
+          <p className="text-xs text-[#6B7280]">
+            Autonomous incident detection, check intervals, and team escalation
+            logs
+          </p>
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded bg-slate-100 text-slate-700">
+          JOURNEY LOG
+        </span>
+      </div>
+
+      <div className="relative border-l-2 border-[#E5E7EB] ml-4 pl-6 space-y-8">
+        {events.map((evt, idx) => {
+          const cfg = getEventConfig(evt.event_type);
+          const Icon = cfg.icon;
+
+          return (
+            <motion.div
+              key={evt.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2, delay: idx * 0.05 }}
+              className="relative"
+            >
+              {/* Timeline marker icon */}
+              <span
+                className={cn(
+                  "absolute -left-[37px] top-0.5 rounded-full p-1.5 border-2 border-white shadow-sm flex items-center justify-center",
+                  cfg.iconBg,
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" />
+              </span>
+
+              {/* Event Card */}
+              <div className={cn("border rounded-xl p-4 shadow-sm bg-white")}>
+                <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-[#111827]">
+                      {cfg.title}
+                    </span>
+                    {evt.escalation_level && (
+                      <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded">
+                        Level: {evt.escalation_level}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-[#9CA3AF] font-mono">
+                    {formatDateTime(evt.created_at)}
+                  </span>
+                </div>
+
+                <p className="text-xs text-[#4B5563] leading-relaxed">
+                  {evt.details}
+                </p>
+
+                {/* Recipient details display */}
+                {Array.isArray(evt.recipients) && evt.recipients.length > 0 && (
+                  <div className="mt-3 bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-[#9CA3AF] mb-1.5 flex items-center gap-1">
+                      <Users className="w-3 h-3" /> Notified Recipients (
+                      {evt.recipients.length})
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {evt.recipients.map((r, i) => (
+                        <div
+                          key={i}
+                          className="bg-white border border-gray-200 rounded px-2 py-1 flex items-center justify-between"
+                        >
+                          <div className="truncate pr-2">
+                            <div className="text-[10px] font-semibold text-[#111827] truncate">
+                              {r.email}
+                            </div>
+                            <div className="text-[9px] text-[#6B7280] font-medium">
+                              {r.role}
+                            </div>
+                          </div>
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {evt.related_run_id && (
+                  <div className="mt-2 text-[10px] text-[#6B7280] font-medium">
+                    Related Run ID:{" "}
+                    <span className="font-mono text-gray-900 bg-gray-100 px-1 py-0.5 rounded">
+                      #{evt.related_run_id}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -10,10 +10,12 @@ import {
   Sparkles,
   TrendingUp,
   Zap,
+  Clock,
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { StatCard } from "../components/StatCard";
 import { api } from "../services/api";
-import type { SystemMetrics, PipelinePerformance } from "../types";
+import type { SystemMetrics, PipelinePerformance, MetricsSummary, HealthMetric } from "../types";
 import { cn } from "../lib/utils";
 import { Loading } from "../components/Loading";
 
@@ -49,6 +51,8 @@ export function MetricsPage() {
   const [hours, setHours] = useState(24);
   const [data, setData] = useState<SystemMetrics | null>(null);
   const [pipelineRows, setPipelineRows] = useState<PipelinePerformance[]>([]);
+  const [summaryData, setSummaryData] = useState<MetricsSummary | null>(null);
+  const [healthData, setHealthData] = useState<HealthMetric[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,12 +60,16 @@ export function MetricsPage() {
     if (showSpinner) setLoading(true);
     setError(null);
     try {
-      const [sys, rows] = await Promise.all([
+      const [sys, rows, summary, health] = await Promise.all([
         api.systemMetrics(hours),
         api.pipelinePerformance(hours),
+        api.metricsSummary(),
+        api.metricsHealth()
       ]);
       setData(sys);
       setPipelineRows(Array.isArray(rows) ? rows : []);
+      setSummaryData(summary);
+      setHealthData(Array.isArray(health) ? health : []);
     } catch (e: any) {
       // On a poll-refresh failure, keep whatever data we already have on
       // screen instead of clearing it — the dashboard should degrade
@@ -147,6 +155,65 @@ export function MetricsPage() {
               </div>
             )}
 
+            {/* Analytics Dashboard */}
+            <div className="space-y-6 mb-8 border-b border-gray-200/60 pb-8">
+              <h2 className="text-lg font-bold text-[#111827]">Analytics Dashboard</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                  label="Total Tickets"
+                  value={summaryData?.total_tickets ?? "—"}
+                  icon={Activity}
+                  accent="violet"
+                />
+                <StatCard
+                  label="AI Resolution Rate"
+                  value={summaryData ? fmtPct(summaryData.ai_resolution_pct) : "—"}
+                  icon={Sparkles}
+                  accent="amber"
+                  sub={`${summaryData?.ai_resolved ?? 0} AI resolved · ${summaryData?.human_resolved ?? 0} human`}
+                />
+                <StatCard
+                  label="Avg MTTR"
+                  value={
+                    summaryData &&
+                    typeof summaryData.mttr_avg_minutes === "number" &&
+                    Number.isFinite(summaryData.mttr_avg_minutes)
+                      ? `${summaryData.mttr_avg_minutes.toFixed(1)}m`
+                      : "—"
+                  }
+                  icon={Clock}
+                  accent="emerald"
+                />
+                <StatCard
+                  label="Jira Tickets Created"
+                  value={summaryData?.jira_tickets_created ?? "—"}
+                  icon={AlertCircle}
+                  accent="rose"
+                  sub={`${summaryData?.open_incidents ?? 0} incidents open`}
+                />
+              </div>
+
+              <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
+                <h3 className="text-sm font-bold text-[#111827] mb-6">Tickets Raised vs AI Solved</h3>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={healthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                      <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
+                        cursor={{ fill: "#F9FAFB" }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
+                      <Bar dataKey="tickets_raised" name="Tickets Raised" fill="#94A3B8" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      <Bar dataKey="tickets_ai_solved" name="AI Solved" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
             {/* Top KPI row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatCard
@@ -225,7 +292,13 @@ export function MetricsPage() {
                           />
                           <Metric
                             label="Top similarity"
-                            value={s ? s.avg_top_similarity.toFixed(2) : "—"}
+                            value={
+                              s &&
+                              typeof s.avg_top_similarity === "number" &&
+                              Number.isFinite(s.avg_top_similarity)
+                                ? s.avg_top_similarity.toFixed(2)
+                                : "—"
+                            }
                           />
                         </div>
                       </div>

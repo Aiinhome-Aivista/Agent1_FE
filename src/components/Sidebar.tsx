@@ -39,7 +39,7 @@ export function Sidebar() {
   const navigate = useNavigate();
 
   const openIncidents = state.incidents.filter(
-    (i) => i.status !== "Remediated" && i.status !== "Escalated",
+    (i) => i.is_active !== false,
   ).length;
 
   const handleLogout = () => {
@@ -98,18 +98,22 @@ export function Sidebar() {
                   <span className="flex-1 whitespace-nowrap animate-in fade-in duration-300">
                     {item.label}
                   </span>
+                  {/* Temporarily commented out for UI
                   {item.to === "/app/incidents" && openIncidents > 0 && (
                     <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#111827] text-white text-[10px] font-bold">
                       {openIncidents}
                     </span>
                   )}
+                  */}
                 </>
               )}
+              {/* Temporarily commented out for UI
               {isCollapsed &&
                 item.to === "/app/incidents" &&
                 openIncidents > 0 && (
                   <div className="absolute top-1 right-1 w-2 h-2 bg-[#111827] rounded-full border border-white" />
                 )}
+              */}
             </NavLink>
           ))}
         </nav>

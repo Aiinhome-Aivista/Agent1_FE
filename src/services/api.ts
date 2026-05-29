@@ -6,6 +6,7 @@ import type {
   DashboardStats,
   HealthMetric,
   Incident,
+  IncidentEvent,
   LogEntry,
   MemoryEntry,
   MetricsSummary,
@@ -36,8 +37,12 @@ let loadingListener: ((loading: boolean) => void) | null = null;
 let errorListener: ((err: string) => void) | null = null;
 
 export const apiEvents = {
-  onLoading: (cb: (loading: boolean) => void) => { loadingListener = cb; },
-  onError: (cb: (err: string) => void) => { errorListener = cb; },
+  onLoading: (cb: (loading: boolean) => void) => {
+    loadingListener = cb;
+  },
+  onError: (cb: (err: string) => void) => {
+    errorListener = cb;
+  },
 };
 
 function updateLoading(delta: number) {
@@ -51,8 +56,8 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache",
-      "Expires": "0",
+      Pragma: "no-cache",
+      Expires: "0",
       ...(init?.headers as Record<string, string> | undefined),
     };
     const tok = auth.getToken();
@@ -145,7 +150,9 @@ export const api = {
   health: () => req<{ status: string; env: string; llm: string }>("/health"),
 
   pipelines: (params?: { connector_id?: string | number }) => {
-    const q = params?.connector_id ? `?connector_id=${params.connector_id}` : "";
+    const q = params?.connector_id
+      ? `?connector_id=${params.connector_id}`
+      : "";
     return req<Pipeline[]>(`/pipelines${q}`);
   },
   pipeline: (id: string) => req<Pipeline>(`/pipelines/${id}`),
@@ -157,8 +164,11 @@ export const api = {
       method: "POST",
     }),
 
-  incidents: () => req<Incident[]>("/incidents"),
+  incidents: (tab?: "open" | "closed" | "all") =>
+    req<Incident[]>(`/incidents${tab ? `?tab=${tab}` : ""}`),
   incident: (id: string) => req<Incident>(`/incidents/${id}`),
+  incidentEvents: (id: string | number) =>
+    req<IncidentEvent[]>(`/incidents/${id}/events`),
   triggerIncident: (body: {
     pipeline_id?: string;
     pipeline_name?: string;
@@ -270,7 +280,9 @@ export const api = {
   // NEW: Runbooks
   // ─────────────────────────────────────────────────────────────────
   runbooks: (includeArchived = false) =>
-    req<Runbook[]>(`/runbooks${includeArchived ? "?include_archived=true" : ""}`),
+    req<Runbook[]>(
+      `/runbooks${includeArchived ? "?include_archived=true" : ""}`,
+    ),
 
   runbook: (id: number | string) => req<Runbook>(`/runbooks/${id}`),
 
@@ -296,10 +308,10 @@ export const api = {
   }) => {
     const fd = new FormData();
     fd.append("file", params.file);
-    if (params.title)       fd.append("title", params.title);
-    if (params.category)    fd.append("category", params.category);
+    if (params.title) fd.append("title", params.title);
+    if (params.category) fd.append("category", params.category);
     if (params.description) fd.append("description", params.description);
-    if (params.risk_level)  fd.append("risk_level", params.risk_level);
+    if (params.risk_level) fd.append("risk_level", params.risk_level);
     if (params.tags?.length) fd.append("tags_csv", params.tags.join(","));
     fd.append("rag_enabled", String(params.rag_enabled ?? true));
     return uploadForm<Runbook>("/runbooks/upload", fd);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Activity,
   Cpu,
@@ -11,11 +11,29 @@ import {
   TrendingUp,
   Zap,
   Clock,
+  CheckCircle2,
+  Boxes,
+  GitPullRequest,
+  CalendarClock,
+  Save,
+  Play,
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 import { StatCard } from "../components/StatCard";
+import { InfoHint } from "../components/InfoHint";
 import { api } from "../services/api";
-import type { SystemMetrics, PipelinePerformance, MetricsSummary, HealthMetric } from "../types";
+import type { SystemMetrics, PipelinePerformance, MetricsSummary, HealthMetric, KBSettings } from "../types";
 import { cn } from "../lib/utils";
 import { Loading } from "../components/Loading";
 
@@ -166,11 +184,18 @@ export function MetricsPage() {
                   accent="violet"
                 />
                 <StatCard
+                  label="Tickets Solved"
+                  value={summaryData?.tickets_solved ?? summaryData?.ai_resolved ?? "—"}
+                  icon={CheckCircle2}
+                  accent="emerald"
+                  sub={`${summaryData?.ai_resolved ?? 0} AI · ${summaryData?.human_resolved ?? 0} human`}
+                />
+                <StatCard
                   label="AI Resolution Rate"
                   value={summaryData ? fmtPct(summaryData.ai_resolution_pct) : "—"}
                   icon={Sparkles}
                   accent="amber"
-                  sub={`${summaryData?.ai_resolved ?? 0} AI resolved · ${summaryData?.human_resolved ?? 0} human`}
+                  sub={`${summaryData?.open_incidents ?? 0} open`}
                 />
                 <StatCard
                   label="Avg MTTR"
@@ -182,14 +207,7 @@ export function MetricsPage() {
                       : "—"
                   }
                   icon={Clock}
-                  accent="emerald"
-                />
-                <StatCard
-                  label="Jira Tickets Created"
-                  value={summaryData?.jira_tickets_created ?? "—"}
-                  icon={AlertCircle}
-                  accent="rose"
-                  sub={`${summaryData?.open_incidents ?? 0} incidents open`}
+                  accent="cyan"
                 />
               </div>
 
@@ -212,6 +230,108 @@ export function MetricsPage() {
                   </ResponsiveContainer>
                 </div>
               </div>
+
+              {/* MTTR + AI-resolution trend */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
+                  <h3 className="text-sm font-bold text-[#111827] mb-1 flex items-center gap-1.5">
+                    MTTR Trend
+                    <InfoHint
+                      align="left"
+                      text="Mean time to resolution per day, in minutes, averaged over incidents resolved that day. Lower is better."
+                    />
+                  </h3>
+                  <p className="text-[11px] text-[#6B7280] mb-5">
+                    Mean time to resolution (minutes / day)
+                  </p>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={healthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
+                        />
+                        <Line type="monotone" dataKey="mttr_minutes" name="MTTR (min)" stroke="#06B6D4" strokeWidth={2.5} dot={{ r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
+                  <h3 className="text-sm font-bold text-[#111827] mb-1 flex items-center gap-1.5">
+                    AI Resolution Trend
+                    <InfoHint
+                      align="left"
+                      text="Percentage of tickets each day that the agent resolved autonomously (AI solved ÷ raised)."
+                    />
+                  </h3>
+                  <p className="text-[11px] text-[#6B7280] mb-5">
+                    Daily AI auto-resolution rate (%)
+                  </p>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={healthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} domain={[0, 100]} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
+                        />
+                        <Line type="monotone" dataKey="success_rate" name="AI resolved %" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Knowledge Base / learning loop */}
+              <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
+                <h3 className="text-sm font-bold text-[#111827] mb-5 flex items-center gap-1.5">
+                  <Boxes className="w-4 h-4 text-violet-500" />
+                  Knowledge Base &amp; Learning Loop
+                  <InfoHint
+                    align="left"
+                    title="How the agent learns"
+                    text={[
+                      "Each distinct error becomes a pattern the agent recognises.",
+                      "Known patterns with an accepted fix can be auto-resolved with a PR.",
+                      "Confidence rises every time a human accepts the proposed fix.",
+                      "Merged human PRs are ingested so the same error is auto-fixable next time.",
+                    ]}
+                  />
+                </h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <KbStat
+                    label="Error patterns"
+                    value={summaryData?.kb?.patterns_total ?? 0}
+                    icon={Database}
+                    tone="text-violet-600"
+                  />
+                  <KbStat
+                    label="Known errors"
+                    value={summaryData?.kb?.patterns_known ?? 0}
+                    icon={CheckCircle2}
+                    tone="text-emerald-600"
+                  />
+                  <KbStat
+                    label="Auto-fixable"
+                    value={summaryData?.kb?.patterns_auto_fixable ?? 0}
+                    icon={Sparkles}
+                    tone="text-amber-600"
+                  />
+                  <KbStat
+                    label="PRs ingested"
+                    value={summaryData?.kb?.human_prs_ingested ?? 0}
+                    icon={GitPullRequest}
+                    tone="text-sky-600"
+                  />
+                </div>
+              </div>
+
+              {/* Daily knowledge-base refresh schedule (stored in SQL) */}
+              <KbSchedulePanel />
             </div>
 
             {/* Top KPI row */}
@@ -436,6 +556,173 @@ export function MetricsPage() {
   );
 }
 
+function KbSchedulePanel() {
+  const [settings, setSettings] = useState<KBSettings | null>(null);
+  const [time, setTime] = useState("02:00");
+  const [enabled, setEnabled] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = async () => {
+    try {
+      const s = await api.kbSettings();
+      setSettings(s);
+      setTime(s.daily_refresh_time || "02:00");
+      setEnabled(s.daily_refresh_enabled);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    setMsg(null);
+    try {
+      const s = await api.updateKbSettings({
+        daily_refresh_enabled: enabled,
+        daily_refresh_time: time,
+      });
+      setSettings(s);
+      setMsg("Schedule saved.");
+    } catch (e: any) {
+      setMsg(e?.message || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const runNow = async () => {
+    setRunning(true);
+    setMsg(null);
+    try {
+      await api.kbRefreshNow();
+      setMsg("Refresh complete — knowledge base consolidated.");
+      load();
+    } catch (e: any) {
+      setMsg(e?.message || "Refresh failed");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const last = settings?.last_run_summary;
+
+  return (
+    <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
+      <h3 className="text-sm font-bold text-[#111827] mb-1 flex items-center gap-1.5">
+        <CalendarClock className="w-4 h-4 text-indigo-500" />
+        Knowledge Base Refresh Schedule
+        <InfoHint
+          align="left"
+          title="Daily consolidation"
+          text={[
+            "At this time each day the agent re-enriches its knowledge base.",
+            "It replays recent resolved incidents (history), every known fix pattern, and active runbooks into the vector store and knowledge graph.",
+            "The time is stored in a SQL table, so it persists and can be changed any time.",
+            "Time is interpreted in UTC.",
+          ]}
+        />
+      </h3>
+      <p className="text-[11px] text-[#6B7280] mb-5">
+        Re-enriches from old errors, history, uploaded runbooks and
+        human-approved fixes — time stored in SQL (UTC).
+      </p>
+
+      <div className="flex flex-wrap items-end gap-5">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+            className="w-4 h-4 accent-indigo-600"
+          />
+          <span className="text-xs font-bold text-[#374151]">
+            Daily refresh enabled
+          </span>
+        </label>
+
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
+            Time (UTC)
+          </div>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="px-3 py-2 text-sm bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+          />
+        </div>
+
+        <button
+          onClick={save}
+          disabled={saving}
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#111827] rounded-lg hover:bg-black disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+          Save schedule
+        </button>
+
+        <button
+          onClick={runNow}
+          disabled={running}
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        >
+          {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+          Run now
+        </button>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-100 text-[11px] text-gray-500 flex flex-wrap gap-x-6 gap-y-1">
+        <span>
+          Last run:{" "}
+          <span className="font-semibold text-gray-700">
+            {settings?.last_run_at
+              ? new Date(
+                  settings.last_run_at.endsWith("Z")
+                    ? settings.last_run_at
+                    : `${settings.last_run_at}Z`,
+                ).toLocaleString()
+              : "never"}
+          </span>
+        </span>
+        {last && (
+          <>
+            <span>
+              Incidents replayed:{" "}
+              <span className="font-semibold text-gray-700">
+                {last.incidents_replayed ?? 0}
+              </span>
+            </span>
+            <span>
+              Patterns mirrored:{" "}
+              <span className="font-semibold text-gray-700">
+                {last.patterns_mirrored ?? 0}
+              </span>
+            </span>
+            <span>
+              Runbooks:{" "}
+              <span className="font-semibold text-gray-700">
+                {last.runbooks_seen ?? 0}
+              </span>
+            </span>
+          </>
+        )}
+      </div>
+
+      {msg && (
+        <div className="mt-3 text-[11px] text-gray-700 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+          {msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="bg-white border border-gray-100 rounded-md px-3 py-2">
@@ -443,6 +730,30 @@ function Metric({ label, value }: { label: string; value: string | number }) {
         {label}
       </div>
       <div className="text-sm font-bold text-[#111827] mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function KbStat({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  icon: ComponentType<{ className?: string }>;
+  tone: string;
+}) {
+  return (
+    <div className="border border-gray-100 rounded-lg p-4 bg-gray-50/50">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+          {label}
+        </span>
+        <Icon className={`w-4 h-4 ${tone}`} />
+      </div>
+      <div className="text-2xl font-bold text-[#111827]">{value}</div>
     </div>
   );
 }

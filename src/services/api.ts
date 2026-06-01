@@ -20,6 +20,11 @@ import type {
   LlmPerformance,
   SystemMetrics,
   ToolSpec,
+  SolutionPattern,
+  SolutionKBStats,
+  ClassifyResult,
+  RaisePRResult,
+  KBSettings,
 } from "../types";
 
 const BASE = "/api/v1";
@@ -353,6 +358,89 @@ export const api = {
 
   systemMetrics: (hours = 24) =>
     req<SystemMetrics>(`/metrics/system?hours=${hours}`),
+
+  // ─────────────────────────────────────────────────────────────────
+  // NEW: Solution Knowledge Base + auto-fix (learning loop)
+  // ─────────────────────────────────────────────────────────────────
+  solutions: (limit = 100) =>
+    req<SolutionPattern[]>(`/solutions?limit=${limit}`),
+
+  solution: (id: number | string) =>
+    req<SolutionPattern>(`/solutions/${id}`),
+
+  solutionStats: () => req<SolutionKBStats>("/solutions/stats"),
+
+  classifyError: (body: {
+    error_text: string;
+    component?: string;
+    llm_confidence?: number;
+  }) =>
+    req<ClassifyResult>("/solutions/classify", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  raisePR: (incidentId: number | string) =>
+    req<RaisePRResult>(`/incidents/${incidentId}/raise-pr`, {
+      method: "POST",
+    }),
+
+  ingestPR: (
+    incidentId: number | string,
+    body: {
+      pr_url: string;
+      diff: string;
+      pr_number?: number;
+      merged_by?: string;
+      file_path?: string;
+      new_content?: string;
+      explanation?: string;
+    },
+  ) =>
+    req<{
+      ok: boolean;
+      pattern_id: number;
+      is_auto_fixable: boolean;
+      confidence: number;
+      acceptance_count: number;
+    }>(`/incidents/${incidentId}/ingest-pr`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  // ─────────────────────────────────────────────────────────────────
+  // NEW: Knowledge-base schedule + enrichment
+  // ─────────────────────────────────────────────────────────────────
+  kbSettings: () => req<KBSettings>("/kb/settings"),
+
+  updateKbSettings: (body: {
+    daily_refresh_enabled?: boolean;
+    daily_refresh_time?: string;
+  }) =>
+    req<KBSettings>("/kb/settings", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  kbStatus: () =>
+    req<{ settings: KBSettings; kb: SolutionKBStats }>("/kb/status"),
+
+  kbRefreshNow: () =>
+    req<Record<string, unknown>>("/kb/refresh", { method: "POST" }),
+
+  updateIncidentFix: (
+    incidentId: number | string,
+    body: { root_cause?: string; fix_steps?: string[]; approve?: boolean },
+  ) =>
+    req<{
+      ok: boolean;
+      enriched: Record<string, unknown>;
+      confidence: number;
+      pattern_id: number | null;
+    }>(`/incidents/${incidentId}/update-fix`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };
 
 export function wsUrl(): string {

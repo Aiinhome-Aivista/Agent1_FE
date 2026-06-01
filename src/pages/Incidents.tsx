@@ -40,12 +40,16 @@ import {
   Users,
   Activity,
   Ticket,
+  GitPullRequest,
+  BrainCircuit,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useStore } from "../hooks/useStore";
 import { cn, formatDateTime, timeAgo } from "../lib/utils";
 import { api } from "../services/api";
-import type { Incident, IncidentEvent } from "../types";
+import type { Incident, IncidentEvent, ClassifyResult } from "../types";
 
 // ─────────────────────────────────────────────────────────────────────
 // Helpers
@@ -396,8 +400,322 @@ function TimelineView({ incident }: TimelineViewProps) {
         </div>
       )}
 
+      {/* Solution KB classification + auto-fix actions */}
+      <SolutionPanel incident={incident} />
+
       {/* Journey Timeline */}
       <JourneyTimeline incidentId={incident.id} />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// NEW: Solution KB classification + auto-fix (raise PR / ingest merged PR)
+// ─────────────────────────────────────────────────────────────────────
+
+function SolutionPanel({ incident }: { incident: Incident }) {
+  const [cls, setCls] = useState<ClassifyResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<"pr" | "ingest" | "refine" | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [showIngest, setShowIngest] = useState(false);
+  const [prUrl, setPrUrl] = useState("");
+  const [diff, setDiff] = useState("");
+  const [showRefine, setShowRefine] = useState(false);
+  const [rcEdit, setRcEdit] = useState("");
+  const [stepsEdit, setStepsEdit] = useState("");
+
+  const classify = async () => {
+    setLoading(true);
+    try {
+      const r = await api.classifyError({
+        error_text: incident.error_log || incident.root_cause || "",
+        component: incident.pipeline_name,
+        llm_confidence: incident.confidence_score || 0,
+      });
+      setCls(r);
+    } catch {
+      setCls(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    classify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incident.id, incident.confidence_score]);
+
+  const handleRaisePR = async () => {
+    setBusy("pr");
+    setMsg(null);
+    try {
+      const r = await api.raisePR(incident.id);
+      if (r.ok && r.mode === "pr") setMsg(`PR opened: ${r.pr_url}`);
+      else if (r.ok && r.mode === "issue") setMsg(`Issue filed: ${r.message}`);
+      else setMsg(r.reason || r.message || "Could not raise a PR for this incident.");
+    } catch (e: any) {
+      setMsg(e?.message || "Failed to raise PR");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleIngest = async () => {
+    if (!prUrl.trim() || !diff.trim()) {
+      setMsg("Provide both the merged PR URL and its diff.");
+      return;
+    }
+    setBusy("ingest");
+    setMsg(null);
+    try {
+      const r = await api.ingestPR(incident.id, { pr_url: prUrl, diff });
+      setMsg(
+        `Ingested into KB · pattern #${r.pattern_id} · confidence ${(r.confidence * 100).toFixed(0)}% · ${
+          r.is_auto_fixable ? "now auto-fixable ✓" : "not yet auto-fixable"
+        }`,
+      );
+      setShowIngest(false);
+      setPrUrl("");
+      setDiff("");
+      classify();
+    } catch (e: any) {
+      setMsg(e?.message || "Failed to ingest PR");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const openRefine = () => {
+    const p = cls?.pattern;
+    setRcEdit(p?.root_cause || incident.root_cause || "");
+    setStepsEdit(
+      (p?.fix_steps && p.fix_steps.length
+        ? p.fix_steps
+        : incident.remediation_plan || []
+      ).join("\n"),
+    );
+    setShowRefine((v) => !v);
+  };
+
+  const handleRefine = async () => {
+    setBusy("refine");
+    setMsg(null);
+    try {
+      const steps = stepsEdit
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const r = await api.updateIncidentFix(incident.id, {
+        root_cause: rcEdit.trim() || undefined,
+        fix_steps: steps.length ? steps : undefined,
+        approve: true,
+      });
+      setMsg(
+        `Approved & enriched · confidence ${Math.round((r.confidence || 0) * 100)}% · knowledge base + graph updated.`,
+      );
+      setShowRefine(false);
+      classify();
+    } catch (e: any) {
+      setMsg(e?.message || "Failed to refine fix");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const pattern = cls?.pattern;
+  const confidence = pattern?.confidence ?? incident.confidence_score ?? 0;
+
+  return (
+    <div className="mb-6 bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+        <BrainCircuit className="w-4 h-4 text-violet-500" />
+        <h3 className="text-sm font-bold text-[#111827]">
+          Knowledge Base &amp; Code Fix
+        </h3>
+        {loading && <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin ml-1" />}
+      </div>
+
+      <div className="p-5 space-y-4">
+        {/* Classification row */}
+        <div className="flex flex-wrap items-center gap-2">
+          {cls && (
+            <span
+              className={cn(
+                "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded",
+                cls.is_known
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-amber-50 text-amber-700",
+              )}
+            >
+              {cls.is_known ? "Known error" : "New error type"}
+            </span>
+          )}
+          {cls?.error_type && (
+            <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-700">
+              {cls.error_type}
+            </span>
+          )}
+          {pattern?.support_group && (
+            <span className="text-[10px] font-medium px-2 py-1 rounded bg-sky-50 text-sky-700 inline-flex items-center gap-1">
+              <Users className="w-3 h-3" /> {pattern.support_group}
+            </span>
+          )}
+          {cls?.auto_fix && (
+            <span className="text-[10px] font-bold px-2 py-1 rounded bg-violet-50 text-violet-700 inline-flex items-center gap-1">
+              <Sparkles className="w-3 h-3" /> Auto-fixable
+            </span>
+          )}
+        </div>
+
+        {cls?.reason && (
+          <p className="text-[11px] text-[#6B7280] leading-relaxed">{cls.reason}</p>
+        )}
+
+        {/* Confidence bar */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              Solution confidence
+            </span>
+            <span className="text-xs font-bold text-[#111827]">
+              {(confidence * 100).toFixed(0)}%
+            </span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all",
+                confidence >= 0.7
+                  ? "bg-emerald-500"
+                  : confidence >= 0.4
+                    ? "bg-amber-500"
+                    : "bg-rose-500",
+              )}
+              style={{ width: `${Math.max(4, Math.min(100, confidence * 100))}%` }}
+            />
+          </div>
+          {pattern && (
+            <p className="text-[10px] text-gray-400 mt-1.5">
+              Seen {pattern.occurrence_count}× · {pattern.acceptance_count} accepted ·{" "}
+              {pattern.rejection_count} rejected — confidence rises each time a
+              human accepts the fix.
+            </p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <button
+            onClick={handleRaisePR}
+            disabled={!!busy}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#111827] rounded-lg hover:bg-black disabled:opacity-50 transition-colors"
+          >
+            {busy === "pr" ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <GitPullRequest className="w-3.5 h-3.5" />
+            )}
+            Write fix &amp; raise PR
+          </button>
+          <button
+            onClick={() => setShowIngest((v) => !v)}
+            disabled={!!busy}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            <Check className="w-3.5 h-3.5" />
+            Ingest merged PR
+          </button>
+          <button
+            onClick={openRefine}
+            disabled={!!busy}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Refine &amp; approve fix
+          </button>
+        </div>
+
+        {showRefine && (
+          <div className="space-y-2 border-t border-gray-100 pt-3">
+            <p className="text-[11px] text-[#6B7280]">
+              Edit the root cause / steps if needed, then approve. The approved
+              fix is folded back into the knowledge base and graph (history +
+              runbooks + this fix), and confidence rises.
+            </p>
+            <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              Root cause
+            </div>
+            <textarea
+              value={rcEdit}
+              onChange={(e) => setRcEdit(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 text-xs bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+            />
+            <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              Fix steps (one per line)
+            </div>
+            <textarea
+              value={stepsEdit}
+              onChange={(e) => setStepsEdit(e.target.value)}
+              rows={5}
+              className="w-full px-3 py-2 text-xs bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+            />
+            <button
+              onClick={handleRefine}
+              disabled={busy === "refine"}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {busy === "refine" ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Check className="w-3.5 h-3.5" />
+              )}
+              Approve &amp; enrich knowledge base
+            </button>
+          </div>
+        )}
+
+        {showIngest && (
+          <div className="space-y-2 border-t border-gray-100 pt-3">
+            <p className="text-[11px] text-[#6B7280]">
+              After a human merges the fix, paste the PR details so the agent
+              learns it. The same error becomes auto-fixable next time.
+            </p>
+            <input
+              value={prUrl}
+              onChange={(e) => setPrUrl(e.target.value)}
+              placeholder="Merged PR URL"
+              className="w-full px-3 py-2 text-xs bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+            />
+            <textarea
+              value={diff}
+              onChange={(e) => setDiff(e.target.value)}
+              placeholder="Paste the unified diff of the merged change…"
+              rows={5}
+              className="w-full px-3 py-2 text-xs font-mono bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+            />
+            <button
+              onClick={handleIngest}
+              disabled={busy === "ingest"}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {busy === "ingest" ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Check className="w-3.5 h-3.5" />
+              )}
+              Ingest into knowledge base
+            </button>
+          </div>
+        )}
+
+        {msg && (
+          <div className="text-[11px] text-gray-700 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 break-all">
+            {msg}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

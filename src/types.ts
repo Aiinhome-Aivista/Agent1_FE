@@ -241,12 +241,106 @@ export interface HealthMetric {
 
 export interface MetricsSummary {
   total_tickets: number;
+  tickets_solved?: number;
   ai_resolved: number;
   human_resolved: number;
   ai_resolution_pct: number;
   mttr_avg_minutes: number;
   open_incidents: number;
   jira_tickets_created: number;
+  kb?: SolutionKBStats;
+}
+
+export interface SolutionKBStats {
+  patterns_total: number;
+  patterns_known: number;
+  patterns_auto_fixable: number;
+  human_prs_ingested: number;
+}
+
+export interface SolutionFix {
+  id: number;
+  origin: "LLM" | "HUMAN_PR" | "RUNBOOK";
+  file_path?: string | null;
+  has_code: boolean;
+  explanation: string;
+  language?: string | null;
+  pr_url?: string | null;
+  pr_number?: number | null;
+  merged_by?: string | null;
+  created_at?: string | null;
+}
+
+export interface SolutionPattern {
+  id: number;
+  signature: string;
+  title: string;
+  category: string;
+  component?: string | null;
+  error_type?: string | null;
+  support_group?: string | null;
+  root_cause: string;
+  fix_summary: string;
+  fix_steps: string[];
+  occurrence_count: number;
+  acceptance_count: number;
+  rejection_count: number;
+  confidence: number;
+  status: "PROPOSED" | "KNOWN" | "DEPRECATED";
+  is_auto_fixable: boolean;
+  first_seen_at?: string | null;
+  last_seen_at?: string | null;
+  last_accepted_at?: string | null;
+  fixes?: SolutionFix[];
+}
+
+export interface ClassifyResult {
+  is_known: boolean;
+  auto_fix: boolean;
+  signature: string;
+  error_type: string;
+  reason: string;
+  pattern: SolutionPattern | null;
+}
+
+export interface RaisePRResult {
+  ok: boolean;
+  skipped?: boolean;
+  mode?: "pr" | "issue";
+  pr_url?: string | null;
+  message?: string;
+  reason?: string;
+  fix_source?: string;
+  file_path?: string | null;
+}
+
+export interface ConfidenceFactor {
+  label: string;
+  detail: string;
+  contribution: number;
+  polarity: "positive" | "negative" | "neutral";
+}
+
+export interface ConfidenceExplanation {
+  score: number;
+  level: "High" | "Medium" | "Low";
+  headline: string;
+  factors: ConfidenceFactor[];
+}
+
+export interface KBSettings {
+  daily_refresh_enabled: boolean;
+  daily_refresh_time: string; // "HH:MM"
+  timezone: string;
+  last_run_at?: string | null;
+  last_run_summary?: {
+    ran_at?: string;
+    incidents_replayed?: number;
+    patterns_mirrored?: number;
+    runbooks_seen?: number;
+    graph_writes?: number;
+    errors?: number;
+  } | null;
 }
 
 export interface Recommendation {

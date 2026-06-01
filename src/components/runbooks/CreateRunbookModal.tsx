@@ -16,6 +16,7 @@ import {
 import { api } from "../../services/api";
 import type { Runbook, RunbookCategory, RunbookSuggestion } from "../../types";
 import { RUNBOOK_CATEGORIES } from "../../types";
+import { InfoHint } from "../InfoHint";
 
 interface Props {
   open: boolean;
@@ -242,9 +243,24 @@ export function CreateRunbookModal({ open, onClose, onSaved }: Props) {
               {/* ─── PHASE 1: PICK FILE ─────────────────────────────── */}
               {phase === "pick" && (
                 <div className="space-y-3">
-                  <label className="text-xs font-bold text-[#111827] uppercase tracking-wider block">
+                  <label className="text-xs font-bold text-[#111827] uppercase tracking-wider flex items-center gap-1.5">
                     Source File (PDF / DOCX / MD / TXT)
+                    <InfoHint
+                      title="What can I upload here?"
+                      text={[
+                        "Operational runbooks & SOPs (step-by-step fix procedures)",
+                        "Rules / policies that describe how known errors should be handled",
+                        "Existing ticket exports or incident write-ups with their resolutions",
+                        "Architecture or pipeline docs that give the agent context",
+                        "Anything that captures tribal knowledge — it is chunked, embedded and used as RAG context during diagnosis.",
+                      ]}
+                    />
                   </label>
+                  <p className="text-[11px] text-[#6B7280] -mt-1">
+                    Uploaded docs enrich the knowledge base. The agent retrieves
+                    the most relevant excerpts when diagnosing a failure and cites
+                    them in the suggested fix.
+                  </p>
                   <div className="border-2 border-dashed border-[#E5E7EB] rounded-xl p-10 text-center bg-[#F9FAFB] hover:bg-gray-50/50 transition-colors relative">
                     <input
                       ref={inputRef}

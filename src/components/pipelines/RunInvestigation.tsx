@@ -704,7 +704,31 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
 
 function AnalysisPanel({ analysis }: { analysis: any }) {
   const [showPatch, setShowPatch] = useState(false);
+  const [showWhy, setShowWhy] = useState(false);
   const confidence = analysis.confidence ?? 0;
+
+  const raw = analysis.raw_response || {};
+  const explain = raw.confidence_explanation as
+    | {
+        level?: string;
+        headline?: string;
+        factors?: {
+          label: string;
+          detail: string;
+          contribution: number;
+          polarity: "positive" | "negative" | "neutral";
+        }[];
+      }
+    | undefined;
+  const rcDetails: string[] = Array.isArray(raw.root_cause_details)
+    ? raw.root_cause_details
+    : [];
+  const validation: string[] = Array.isArray(raw.validation_steps)
+    ? raw.validation_steps
+    : [];
+  const classification = raw.classification as
+    | { is_known?: boolean; error_type?: string; reason?: string }
+    | undefined;
 
   return (
     <div className="bg-white border border-blue-100 rounded-xl shadow-sm relative overflow-hidden">
@@ -768,10 +792,102 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           >
             {Math.round(confidence * 100)}%
           </span>
+          {explain && (
+            <button
+              onClick={() => setShowWhy((v) => !v)}
+              className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors"
+            >
+              {showWhy ? "Hide" : "Why?"}
+            </button>
+          )}
         </div>
       </div>
 
       <div className="p-6 space-y-6">
+        {/* Classification + confidence explanation */}
+        {(classification || explain) && (
+          <div className="space-y-3">
+            {classification && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded",
+                    classification.is_known
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-amber-50 text-amber-700",
+                  )}
+                >
+                  {classification.is_known ? "Known error" : "New error type"}
+                </span>
+                {classification.error_type && (
+                  <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-700">
+                    {classification.error_type}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {explain && showWhy && (
+              <div className="bg-blue-50/40 border border-blue-100 rounded-xl p-4 space-y-3">
+                <div className="text-[10px] font-bold text-blue-700 uppercase tracking-widest">
+                  Why confidence is {explain.level}
+                </div>
+                {explain.headline && (
+                  <p className="text-xs text-[#374151] leading-relaxed">
+                    {explain.headline}
+                  </p>
+                )}
+                <div className="space-y-2.5">
+                  {(explain.factors || []).map((f, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <span
+                        className={cn(
+                          "mt-1.5 w-2 h-2 rounded-full shrink-0",
+                          f.polarity === "positive"
+                            ? "bg-emerald-500"
+                            : f.polarity === "negative"
+                              ? "bg-rose-500"
+                              : "bg-gray-300",
+                        )}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-[#111827]">
+                            {f.label}
+                          </span>
+                          {f.contribution > 0 && (
+                            <span className="text-[10px] font-mono text-gray-400">
+                              {Math.round(f.contribution * 100)}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#6B7280] leading-relaxed mt-0.5">
+                          {f.detail}
+                        </p>
+                        {f.contribution > 0 && (
+                          <div className="h-1 bg-gray-100 rounded-full overflow-hidden mt-1.5">
+                            <div
+                              className={cn(
+                                "h-full rounded-full",
+                                f.polarity === "negative"
+                                  ? "bg-rose-400"
+                                  : "bg-blue-400",
+                              )}
+                              style={{
+                                width: `${Math.max(4, Math.min(100, f.contribution * 100))}%`,
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div>
           <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
             Summary
@@ -804,6 +920,22 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           );
         })()}
 
+        {rcDetails.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+              Pinpointed Evidence
+            </div>
+            <ul className="space-y-1.5">
+              {rcDetails.map((d, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                  <span className="leading-relaxed">{d}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {analysis.suggested_fix && (
           <div>
             <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
@@ -812,6 +944,22 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             <div className="text-sm text-[#374151] whitespace-pre-wrap leading-relaxed italic border-l-4 border-emerald-500 pl-4 py-2">
               {analysis.suggested_fix}
             </div>
+          </div>
+        )}
+
+        {validation.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+              Validation Steps
+            </div>
+            <ul className="space-y-1.5">
+              {validation.map((v, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
+                  <span className="mt-0.5 text-emerald-500 shrink-0">✓</span>
+                  <span className="leading-relaxed">{v}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

@@ -17,6 +17,9 @@ import {
   CalendarClock,
   Save,
   Play,
+  FileText,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import {
   BarChart,
@@ -556,6 +559,53 @@ export function MetricsPage() {
   );
 }
 
+const DUMMY_LOGS = [
+  {
+    id: "log-1",
+    timestamp: "2026-05-30T16:11:50.000Z",
+    status: "success",
+    message: "Started knowledge base consolidation",
+    details: {
+      source: "scheduler",
+      trigger: "daily_cron",
+      target_collections: ["incidents", "runbooks", "patterns"],
+    },
+  },
+  {
+    id: "log-2",
+    timestamp: "2026-05-30T16:11:52.120Z",
+    status: "success",
+    message: "Replaying recently resolved incidents",
+    details: {
+      processed: 3,
+      skipped: 0,
+      new_vectors_generated: 12,
+    },
+  },
+  {
+    id: "log-3",
+    timestamp: "2026-05-30T16:11:53.450Z",
+    status: "error",
+    message: "Failed to process runbook chunks",
+    details: {
+      error_code: "TIMEOUT",
+      runbooks_scanned: 2,
+      chunks_updated: 0,
+    },
+  },
+  {
+    id: "log-4",
+    timestamp: "2026-05-30T16:11:55.800Z",
+    status: "success",
+    message: "Knowledge base refresh completed with partial success",
+    details: {
+      total_duration_ms: 5800,
+      collections_updated: 2,
+      status: "WARNING",
+    },
+  },
+];
+
 function KbSchedulePanel() {
   const [settings, setSettings] = useState<KBSettings | null>(null);
   const [time, setTime] = useState("02:00");
@@ -563,6 +613,8 @@ function KbSchedulePanel() {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [showLogs, setShowLogs] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -677,42 +729,108 @@ function KbSchedulePanel() {
         </button>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-100 text-[11px] text-gray-500 flex flex-wrap gap-x-6 gap-y-1">
-        <span>
-          Last run:{" "}
-          <span className="font-semibold text-gray-700">
-            {settings?.last_run_at
-              ? new Date(
-                  settings.last_run_at.endsWith("Z")
-                    ? settings.last_run_at
-                    : `${settings.last_run_at}Z`,
-                ).toLocaleString()
-              : "never"}
+      <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+        <div className="text-[11px] text-gray-500 flex flex-wrap gap-x-6 gap-y-1">
+          <span>
+            Last run:{" "}
+            <span className="font-semibold text-gray-700">
+              {settings?.last_run_at
+                ? new Date(
+                    settings.last_run_at.endsWith("Z")
+                      ? settings.last_run_at
+                      : `${settings.last_run_at}Z`,
+                  ).toLocaleString()
+                : "never"}
+            </span>
           </span>
-        </span>
-        {last && (
-          <>
-            <span>
-              Incidents replayed:{" "}
-              <span className="font-semibold text-gray-700">
-                {last.incidents_replayed ?? 0}
+          {last && (
+            <>
+              <span>
+                Incidents replayed:{" "}
+                <span className="font-semibold text-gray-700">
+                  {last.incidents_replayed ?? 0}
+                </span>
               </span>
-            </span>
-            <span>
-              Patterns mirrored:{" "}
-              <span className="font-semibold text-gray-700">
-                {last.patterns_mirrored ?? 0}
+              <span>
+                Patterns mirrored:{" "}
+                <span className="font-semibold text-gray-700">
+                  {last.patterns_mirrored ?? 0}
+                </span>
               </span>
-            </span>
-            <span>
-              Runbooks:{" "}
-              <span className="font-semibold text-gray-700">
-                {last.runbooks_seen ?? 0}
+              <span>
+                Runbooks:{" "}
+                <span className="font-semibold text-gray-700">
+                  {last.runbooks_seen ?? 0}
+                </span>
               </span>
-            </span>
-          </>
-        )}
+            </>
+          )}
+        </div>
+        
+        <button
+          onClick={() => setShowLogs(!showLogs)}
+          className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg"
+        >
+          <FileText className="w-3.5 h-3.5" />
+          {showLogs ? "Hide logs" : "View logs"}
+        </button>
       </div>
+
+      {showLogs && (
+        <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 text-xs font-bold text-gray-700 flex items-center gap-2">
+            <Database className="w-3.5 h-3.5 text-gray-500" />
+            Refresh Logs
+          </div>
+          <div className="divide-y divide-gray-100">
+            {DUMMY_LOGS.map((log) => (
+              <div key={log.id} className="flex flex-col">
+                <div 
+                  className="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                >
+                  <div className="flex-shrink-0">
+                    {expandedLogId === log.id ? (
+                      <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                    )}
+                  </div>
+                  <span className="text-[11px] font-mono text-gray-500 whitespace-nowrap">
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </span>
+                  <span className={cn("text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded", 
+                    log.status === 'success' ? 'bg-emerald-100 text-emerald-700' : 
+                    log.status === 'error' ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'
+                  )}>
+                    {log.status}
+                  </span>
+                  <span className="text-xs text-gray-700 font-medium">
+                    {log.message}
+                  </span>
+                </div>
+                
+                {expandedLogId === log.id && (
+                  <div className="px-11 py-4 bg-gray-50 border-t border-gray-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6">
+                      {Object.entries(log.details).map(([key, value]) => (
+                        <div key={key} className="flex items-start gap-2">
+                          <span className="text-[11px] font-medium text-gray-500 capitalize min-w-24">
+                            {key.replace(/_/g, ' ')}:
+                          </span>
+                          <span className="text-[11px] text-gray-900 font-mono">
+                            {Array.isArray(value) ? value.join(', ') : String(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {msg && (
         <div className="mt-3 text-[11px] text-gray-700 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">

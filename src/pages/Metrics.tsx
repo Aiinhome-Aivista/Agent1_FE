@@ -797,7 +797,7 @@ function KbSchedulePanel() {
                     )}
                   </div>
                   <span className="text-[11px] font-mono text-gray-500 whitespace-nowrap">
-                    {new Date(log.timestamp).toLocaleTimeString()}
+                    {new Date(log.timestamp).toLocaleString()}
                   </span>
                   <span className={cn("text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded", 
                     log.status === 'success' ? 'bg-emerald-100 text-emerald-700' : 

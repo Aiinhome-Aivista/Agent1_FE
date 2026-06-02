@@ -920,28 +920,37 @@ function JourneyTimeline({ incidentId }: JourneyTimelineProps) {
                 {/* Recipient details display */}
                 {Array.isArray(evt.recipients) && evt.recipients.length > 0 && (
                   <div className="mt-3 bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-[#9CA3AF] mb-1.5 flex items-center gap-1">
-                      <Users className="w-3 h-3" /> Notified Recipients (
-                      {evt.recipients.length})
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {evt.recipients.map((r, i) => (
-                        <div
-                          key={i}
-                          className="bg-white border border-gray-200 rounded px-2 py-1 flex items-center justify-between"
-                        >
-                          <div className="truncate pr-2">
-                            <div className="text-[10px] font-semibold text-[#111827] truncate">
-                              {r.email}
-                            </div>
-                            <div className="text-[9px] text-[#6B7280] font-medium">
-                              {r.role}
-                            </div>
+                    {(() => {
+                      const splitRecipients = evt.recipients.flatMap(r => 
+                        (r.email || "").split(",").map(e => ({ email: e.trim(), role: r.role })).filter(x => x.email)
+                      );
+                      return (
+                        <>
+                          <div className="text-[9px] font-bold uppercase tracking-wider text-[#9CA3AF] mb-1.5 flex items-center gap-1">
+                            <Users className="w-3 h-3" /> Notified Recipients (
+                            {splitRecipients.length})
                           </div>
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                        </div>
-                      ))}
-                    </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {splitRecipients.map((r, i) => (
+                              <div
+                                key={i}
+                                className="bg-white border border-gray-200 rounded px-2 py-1 flex items-center justify-between"
+                              >
+                                <div className="truncate pr-2">
+                                  <div className="text-[10px] font-semibold text-[#111827] truncate">
+                                    {r.email}
+                                  </div>
+                                  <div className="text-[9px] text-[#6B7280] font-medium">
+                                    {r.role}
+                                  </div>
+                                </div>
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
 

@@ -295,7 +295,7 @@ export function RunInvestigation({
                         [{l.level}]
                       </span>
                       {l.source && (
-                        <span className="text-blue-400 shrink-0 max-w-[150px] truncate">
+                        <span className="text-blue-600 dark:text-blue-400 shrink-0 max-w-[150px] truncate">
                           {l.source}
                         </span>
                       )}
@@ -303,8 +303,8 @@ export function RunInvestigation({
                         className={cn(
                           "flex-1 whitespace-pre-wrap wrap-break-word",
                           l.level === "ERROR"
-                            ? "text-rose-200"
-                            : "text-gray-300",
+                            ? "text-rose-600 dark:text-rose-400"
+                            : "text-app-primary",
                         )}
                       >
                         {l.message}
@@ -523,13 +523,13 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
                 <div className="text-sm text-app-secondary leading-relaxed italic">
                   {renderValue(
                     detailedError.message ||
-                    detailedError.error ||
-                    "No detailed message provided.",
+                      detailedError.error ||
+                      "No detailed message provided.",
                   )}
                 </div>
                 {detailedError.logs && (
-                  <div className="bg-app-input text-gray-400 p-3 rounded-lg font-mono text-[10px] overflow-x-auto border border-[#1F2937] shadow-inner">
-                    <div className="text-[8px] font-bold text-app-secondary uppercase tracking-widest mb-2 border-b border-[#1F2937] pb-1">
+                  <div className="bg-app-input text-app-secondary p-3 rounded-lg font-mono text-[10px] overflow-x-auto border border-app-border shadow-inner">
+                    <div className="text-[8px] font-bold text-app-secondary uppercase tracking-widest mb-2 border-b border-app-border pb-1">
                       Technical Logs
                     </div>
                     {detailedError.logs}
@@ -547,10 +547,10 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
 
             {/* Render structured error logs if they exist at error.logs level */}
             {Array.isArray(data.error?.logs) && data.error.logs.length > 0 && (
-              <div className="mt-4 bg-app-input rounded-xl overflow-hidden border border-[#1F2937] shadow-lg">
-                <div className="px-4 py-2 border-b border-[#1F2937] bg-[#1F2937]/30 flex items-center gap-2">
+              <div className="mt-4 bg-app-input rounded-xl overflow-hidden border border-app-border shadow-lg">
+                <div className="px-4 py-2 border-b border-app-border bg-[#1F2937]/30 flex items-center gap-2">
                   <Terminal size={10} className="text-blue-400" />
-                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">
+                  <span className="text-[8px] font-bold text-app-secondary uppercase tracking-widest">
                     Forensic Log Extract
                   </span>
                 </div>
@@ -661,43 +661,43 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
       {(data.additional_context?.potential_causes?.length > 0 ||
         data.additional_context?.impact ||
         data.timestamp) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-app-border">
-            <div>
-              <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                <Sparkles size={12} className="text-amber-500" /> Potential Causes
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {data.additional_context?.potential_causes?.map(
-                  (cause: string, idx: number) => (
-                    <span
-                      key={idx}
-                      className="px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-medium border border-amber-100 flex items-center gap-2"
-                    >
-                      <div className="w-1 h-1 rounded-full bg-amber-400" />
-                      {renderValue(cause)}
-                    </span>
-                  ),
-                )}
-                {(!data.additional_context?.potential_causes ||
-                  data.additional_context.potential_causes.length === 0) && (
-                    <span className="text-[10px] text-app-secondary italic">
-                      No specific causes flagged.
-                    </span>
-                  )}
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-app-border">
+          <div>
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <Sparkles size={12} className="text-amber-500" /> Potential Causes
             </div>
-            {data.additional_context?.impact && (
-              <div className="bg-app-surface border border-app-border/50 border border-app-border/50 rounded-2xl p-5">
-                <div className="text-[10px] font-bold text-app-brand uppercase tracking-widest mb-2">
-                  Business Impact Assessment
-                </div>
-                <p className="text-xs text-app-secondary leading-relaxed italic">
-                  "{renderValue(data.additional_context.impact)}"
-                </p>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {data.additional_context?.potential_causes?.map(
+                (cause: string, idx: number) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-medium border border-amber-100 flex items-center gap-2"
+                  >
+                    <div className="w-1 h-1 rounded-full bg-amber-400" />
+                    {renderValue(cause)}
+                  </span>
+                ),
+              )}
+              {(!data.additional_context?.potential_causes ||
+                data.additional_context.potential_causes.length === 0) && (
+                <span className="text-[10px] text-app-secondary italic">
+                  No specific causes flagged.
+                </span>
+              )}
+            </div>
           </div>
-        )}
+          {data.additional_context?.impact && (
+            <div className="bg-app-surface border border-app-border/50 border border-app-border/50 rounded-2xl p-5">
+              <div className="text-[10px] font-bold text-app-brand uppercase tracking-widest mb-2">
+                Business Impact Assessment
+              </div>
+              <p className="text-xs text-app-secondary leading-relaxed italic">
+                "{renderValue(data.additional_context.impact)}"
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -710,15 +710,15 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
   const raw = analysis.raw_response || {};
   const explain = raw.confidence_explanation as
     | {
-      level?: string;
-      headline?: string;
-      factors?: {
-        label: string;
-        detail: string;
-        contribution: number;
-        polarity: "positive" | "negative" | "neutral";
-      }[];
-    }
+        level?: string;
+        headline?: string;
+        factors?: {
+          label: string;
+          detail: string;
+          contribution: number;
+          polarity: "positive" | "negative" | "neutral";
+        }[];
+      }
     | undefined;
 
   const rcDetails: string[] = Array.isArray(raw.root_cause_details)
@@ -776,7 +776,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">
             Confidence
           </span>
-          <div className="w-24 h-1.5 bg-app-surface rounded-full overflow-hidden">
+          <div className="w-24 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
               className={cn(
                 "h-full transition-all duration-500",
@@ -793,10 +793,10 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             className={cn(
               "text-xs font-bold font-mono",
               confidence >= 0.7
-                ? "text-emerald-400"
+                ? "text-emerald-600 dark:text-emerald-400"
                 : confidence >= 0.4
-                  ? "text-amber-400"
-                  : "text-rose-400",
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-rose-600 dark:text-rose-400",
             )}
           >
             {Math.round(confidence * 100)}%
@@ -865,7 +865,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                             {f.label}
                           </span>
                           {f.contribution > 0 && (
-                            <span className="text-[10px] font-mono text-gray-400">
+                            <span className="text-[10px] font-mono text-app-secondary">
                               {Math.round(f.contribution * 100)}%
                             </span>
                           )}
@@ -908,13 +908,21 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
 
         {errorDetails && (
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Error Details
             </div>
-            <div className="text-sm text-[#4B5563] leading-relaxed">
-              {errorDetails.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
-                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
-              )}
+            <div className="text-sm text-app-primary leading-relaxed">
+              {errorDetails
+                .split(/\*\*(.*?)\*\*/g)
+                .map((part: string, i: number) =>
+                  i % 2 === 1 ? (
+                    <strong key={i} className="font-bold text-app-primary">
+                      {part}
+                    </strong>
+                  ) : (
+                    part
+                  ),
+                )}
             </div>
           </div>
         )}
@@ -934,10 +942,18 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                 <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
                   Root Cause
                 </div>
-                <div className="text-sm text-[#4B5563] whitespace-pre-wrap bg-[#F9FAFB] p-4 rounded-lg border border-[#F3F4F6] leading-relaxed">
-                  {analysis.root_cause.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
-                    i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
-                  )}
+                <div className="text-sm text-app-primary whitespace-pre-wrap bg-app-surface p-4 rounded-lg border border-app-border leading-relaxed">
+                  {analysis.root_cause
+                    .split(/\*\*(.*?)\*\*/g)
+                    .map((part: string, i: number) =>
+                      i % 2 === 1 ? (
+                        <strong key={i} className="font-bold text-app-primary">
+                          {part}
+                        </strong>
+                      ) : (
+                        part
+                      ),
+                    )}
                 </div>
               </div>
             )
@@ -951,7 +967,10 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             </div>
             <ul className="space-y-1.5">
               {rcDetails.map((d, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-app-secondary">
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-sm text-app-primary"
+                >
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
                   <span className="leading-relaxed">{d}</span>
                 </li>
@@ -962,17 +981,31 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
 
         {contributingFactors.length > 0 && (
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Contributing Factors
             </div>
             <ul className="space-y-1.5">
               {contributingFactors.map((d: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-sm text-app-primary"
+                >
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                   <span className="leading-relaxed">
-                    {d.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) =>
-                      idx % 2 === 1 ? <strong key={idx} className="font-bold text-gray-900">{part}</strong> : part
-                    )}
+                    {d
+                      .split(/\*\*(.*?)\*\*/g)
+                      .map((part: string, idx: number) =>
+                        idx % 2 === 1 ? (
+                          <strong
+                            key={idx}
+                            className="font-bold text-app-primary"
+                          >
+                            {part}
+                          </strong>
+                        ) : (
+                          part
+                        ),
+                      )}
                   </span>
                 </li>
               ))}
@@ -982,25 +1015,39 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
 
         {failureMechanism && (
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Failure Mechanism
             </div>
-            <div className="text-sm text-[#4B5563] whitespace-pre-wrap bg-rose-50 p-4 rounded-lg border border-rose-100 leading-relaxed">
-              {failureMechanism.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
-                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
-              )}
+            <div className="text-sm text-app-primary whitespace-pre-wrap bg-rose-50 p-4 rounded-lg border border-rose-100 leading-relaxed">
+              {failureMechanism
+                .split(/\*\*(.*?)\*\*/g)
+                .map((part: string, i: number) =>
+                  i % 2 === 1 ? (
+                    <strong key={i} className="font-bold text-app-primary">
+                      {part}
+                    </strong>
+                  ) : (
+                    part
+                  ),
+                )}
             </div>
           </div>
         )}
 
         {impact && (
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Impact
             </div>
-            <div className="text-sm text-[#4B5563] leading-relaxed">
+            <div className="text-sm text-app-primary leading-relaxed">
               {impact.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
-                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
+                i % 2 === 1 ? (
+                  <strong key={i} className="font-bold text-app-primary">
+                    {part}
+                  </strong>
+                ) : (
+                  part
+                ),
               )}
             </div>
           </div>
@@ -1008,43 +1055,76 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
 
         {analysis.suggested_fix && (
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Immediate Fix
             </div>
-            <div className="text-sm text-[#374151] whitespace-pre-wrap leading-relaxed italic border-l-4 border-emerald-500 pl-4 py-2">
-              {analysis.suggested_fix.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
-                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900 not-italic">{part}</strong> : part
-              )}
+            <div className="text-sm text-app-primary whitespace-pre-wrap leading-relaxed italic border-l-4 border-emerald-500 pl-4 py-2">
+              {analysis.suggested_fix
+                .split(/\*\*(.*?)\*\*/g)
+                .map((part: string, i: number) =>
+                  i % 2 === 1 ? (
+                    <strong
+                      key={i}
+                      className="font-bold text-app-primary not-italic"
+                    >
+                      {part}
+                    </strong>
+                  ) : (
+                    part
+                  ),
+                )}
             </div>
           </div>
         )}
 
         {longTermPrevention && (
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Long-Term Prevention
             </div>
-            <div className="text-sm text-[#4B5563] leading-relaxed">
-              {longTermPrevention.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
-                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
-              )}
+            <div className="text-sm text-app-primary leading-relaxed">
+              {longTermPrevention
+                .split(/\*\*(.*?)\*\*/g)
+                .map((part: string, i: number) =>
+                  i % 2 === 1 ? (
+                    <strong key={i} className="font-bold text-app-primary">
+                      {part}
+                    </strong>
+                  ) : (
+                    part
+                  ),
+                )}
             </div>
           </div>
         )}
 
         {recommendedActions.length > 0 && (
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Recommended Actions
             </div>
             <ul className="space-y-1.5">
               {recommendedActions.map((v: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-sm text-app-primary"
+                >
                   <span className="mt-0.5 text-blue-500 shrink-0">→</span>
                   <span className="leading-relaxed">
-                    {v.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) =>
-                      idx % 2 === 1 ? <strong key={idx} className="font-bold text-gray-900">{part}</strong> : part
-                    )}
+                    {v
+                      .split(/\*\*(.*?)\*\*/g)
+                      .map((part: string, idx: number) =>
+                        idx % 2 === 1 ? (
+                          <strong
+                            key={idx}
+                            className="font-bold text-app-primary"
+                          >
+                            {part}
+                          </strong>
+                        ) : (
+                          part
+                        ),
+                      )}
                   </span>
                 </li>
               ))}
@@ -1059,12 +1139,26 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             </div>
             <ul className="space-y-1.5">
               {validation.map((v: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-sm text-app-primary"
+                >
                   <span className="mt-0.5 text-emerald-500 shrink-0">✓</span>
                   <span className="leading-relaxed">
-                    {v.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) =>
-                      idx % 2 === 1 ? <strong key={idx} className="font-bold text-gray-900">{part}</strong> : part
-                    )}
+                    {v
+                      .split(/\*\*(.*?)\*\*/g)
+                      .map((part: string, idx: number) =>
+                        idx % 2 === 1 ? (
+                          <strong
+                            key={idx}
+                            className="font-bold text-app-primary"
+                          >
+                            {part}
+                          </strong>
+                        ) : (
+                          part
+                        ),
+                      )}
                   </span>
                 </li>
               ))}

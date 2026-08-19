@@ -502,7 +502,7 @@ export function MetricsPage() {
                       <th className="px-3 py-3 text-right">p99</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#F3F4F6]">
+                  <tbody className="divide-y divide-app-border">
                     {sortedRows.map((r) => (
                       <tr
                         key={r.pipeline_id}

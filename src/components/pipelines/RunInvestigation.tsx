@@ -720,6 +720,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         }[];
       }
     | undefined;
+
   const rcDetails: string[] = Array.isArray(raw.root_cause_details)
     ? raw.root_cause_details
     : [];
@@ -729,6 +730,14 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
   const classification = raw.classification as
     | { is_known?: boolean; error_type?: string; reason?: string }
     | undefined;
+
+  // New Industry-Standard RCA fields
+  const errorDetails = raw.error_details || "";
+  const contributingFactors = raw.contributing_factors || [];
+  const failureMechanism = raw.failure_mechanism || "";
+  const impact = raw.impact || "";
+  const longTermPrevention = raw.long_term_prevention || "";
+  const recommendedActions = raw.recommended_actions || [];
 
   return (
     <div className="bg-white border border-blue-100 rounded-xl shadow-sm relative overflow-hidden">
@@ -890,12 +899,25 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
 
         <div>
           <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
-            Summary
+            Incident Summary
           </div>
           <div className="text-sm text-[#111827] leading-relaxed font-medium">
             {analysis.summary}
           </div>
         </div>
+        
+        {errorDetails && (
+          <div>
+            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+              Error Details
+            </div>
+            <div className="text-sm text-[#4B5563] leading-relaxed">
+              {errorDetails.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
+              )}
+            </div>
+          </div>
+        )}
 
         {(() => {
           const structuredData = parseRootCause(analysis.root_cause);
@@ -913,7 +935,9 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                   Root Cause
                 </div>
                 <div className="text-sm text-[#4B5563] whitespace-pre-wrap bg-[#F9FAFB] p-4 rounded-lg border border-[#F3F4F6] leading-relaxed">
-                  {analysis.root_cause}
+                  {analysis.root_cause.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+                    i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
+                  )}
                 </div>
               </div>
             )
@@ -936,14 +960,95 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           </div>
         )}
 
+        {contributingFactors.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+              Contributing Factors
+            </div>
+            <ul className="space-y-1.5">
+              {contributingFactors.map((d: string, i: number) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <span className="leading-relaxed">
+                    {d.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) => 
+                      idx % 2 === 1 ? <strong key={idx} className="font-bold text-gray-900">{part}</strong> : part
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {failureMechanism && (
+          <div>
+            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+              Failure Mechanism
+            </div>
+            <div className="text-sm text-[#4B5563] whitespace-pre-wrap bg-rose-50 p-4 rounded-lg border border-rose-100 leading-relaxed">
+              {failureMechanism.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
+              )}
+            </div>
+          </div>
+        )}
+
+        {impact && (
+          <div>
+            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+              Impact
+            </div>
+            <div className="text-sm text-[#4B5563] leading-relaxed">
+              {impact.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
+              )}
+            </div>
+          </div>
+        )}
+
         {analysis.suggested_fix && (
           <div>
             <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
-              Suggested Fix
+              Immediate Fix
             </div>
             <div className="text-sm text-[#374151] whitespace-pre-wrap leading-relaxed italic border-l-4 border-emerald-500 pl-4 py-2">
-              {analysis.suggested_fix}
+              {analysis.suggested_fix.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900 not-italic">{part}</strong> : part
+              )}
             </div>
+          </div>
+        )}
+
+        {longTermPrevention && (
+          <div>
+            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+              Long-Term Prevention
+            </div>
+            <div className="text-sm text-[#4B5563] leading-relaxed">
+              {longTermPrevention.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+                i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
+              )}
+            </div>
+          </div>
+        )}
+
+        {recommendedActions.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+              Recommended Actions
+            </div>
+            <ul className="space-y-1.5">
+              {recommendedActions.map((v: string, i: number) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
+                  <span className="mt-0.5 text-blue-500 shrink-0">→</span>
+                  <span className="leading-relaxed">
+                    {v.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) => 
+                      idx % 2 === 1 ? <strong key={idx} className="font-bold text-gray-900">{part}</strong> : part
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -953,10 +1058,14 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
               Validation Steps
             </div>
             <ul className="space-y-1.5">
-              {validation.map((v, i) => (
+              {validation.map((v: string, i: number) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
                   <span className="mt-0.5 text-emerald-500 shrink-0">✓</span>
-                  <span className="leading-relaxed">{v}</span>
+                  <span className="leading-relaxed">
+                    {v.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) => 
+                      idx % 2 === 1 ? <strong key={idx} className="font-bold text-gray-900">{part}</strong> : part
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>

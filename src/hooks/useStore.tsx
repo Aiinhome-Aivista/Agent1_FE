@@ -42,7 +42,7 @@ function reducer(state: State, action: Action): State {
     case 'snapshot':
       return {
         ...state,
-        pipelines: action.payload.pipelines,
+        pipelines: action.payload.pipelines && action.payload.pipelines.length > 0 ? action.payload.pipelines : state.pipelines,
         incidents: action.payload.incidents,
         agents: action.payload.agents,
         simulating: action.payload.simulating,

@@ -78,7 +78,7 @@ export function AuditPage() {
         <Loading message="Fetching forensic audit trail..." />
       ) : (
         <main className="flex-1 overflow-hidden flex flex-col">
-        <div className="px-10 py-6 border-b border-[#E5E7EB] bg-white flex flex-wrap items-center gap-3">
+        <div className="px-10 py-6 border-b border-app-border bg-app-surface flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1">
             {TYPES.map((t) => (
               <button
@@ -87,8 +87,8 @@ export function AuditPage() {
                 className={cn(
                   'px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded transition-all flex items-center gap-1.5',
                   filter === t.id
-                    ? 'bg-[#111827] text-white'
-                    : 'bg-gray-50 text-[#6B7280] hover:bg-gray-100',
+                    ? 'bg-app-input text-app-primary'
+                    : 'bg-app-surface text-app-secondary hover:bg-app-border',
                 )}
               >
                 {t.label}
@@ -98,7 +98,7 @@ export function AuditPage() {
               </button>
             ))}
           </div>
-          <div className="flex-1 min-w-[200px] flex items-center gap-2 px-3 bg-gray-50 rounded border border-[#E5E7EB]">
+          <div className="flex-1 min-w-[200px] flex items-center gap-2 px-3 bg-app-surface rounded border border-app-border">
             <Search className="w-3.5 h-3.5 text-[#9CA3AF]" />
             <input
               value={query}
@@ -111,8 +111,8 @@ export function AuditPage() {
             {filtered.length} events
           </span>
         </div>
-        <div className="flex-1 overflow-y-auto p-7 custom-scrollbar bg-white">
-          <div className="bg-white rounded-lg max-w-6xl mx-auto">
+        <div className="flex-1 overflow-y-auto p-7 custom-scrollbar bg-app-surface">
+          <div className="bg-app-surface rounded-lg max-w-6xl mx-auto">
             <LiveLogStream logs={filtered} height="100%" />
           </div>
         </div>

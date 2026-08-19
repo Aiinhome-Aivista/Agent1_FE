@@ -35,14 +35,14 @@ function MetricCard({
   accent?: "blue" | "emerald" | "rose" | "gray";
 }) {
   const accentMap = {
-    blue: "text-blue-600",
+    blue: "text-app-brand",
     emerald: "text-emerald-600",
     rose: "text-rose-600",
-    gray: "text-[#111827]",
+    gray: "text-app-primary",
   };
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-lg p-4 shadow-sm">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-1">
+    <div className="bg-app-surface border border-app-border rounded-lg p-4 shadow-sm">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-app-secondary mb-1">
         {label}
       </div>
       <div className={cn("text-xl font-bold tabular-nums", accentMap[accent])}>
@@ -119,14 +119,14 @@ export function PipelineDetail({
   }, [filteredRuns, sortDirection]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#F9FAFB]">
+    <div className="flex-1 flex flex-col min-h-0 bg-app-bg">
       <div className="flex-1 flex flex-col min-h-0 p-6">
         <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col min-h-0 space-y-6">
           {/* Back Action */}
           <div className="flex items-center">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E5E7EB] rounded text-[10px] font-bold uppercase tracking-[0.15em] text-[#6B7280] hover:bg-gray-50 transition-all shadow-sm"
+              className="flex items-center gap-2 px-3 py-1.5 bg-app-surface border border-app-border rounded text-[10px] font-bold uppercase tracking-[0.15em] text-app-secondary hover:bg-app-bg transition-all shadow-sm"
             >
               <ArrowLeft size={12} />
               Back to Catalog
@@ -159,11 +159,11 @@ export function PipelineDetail({
           </div>
 
           {/* Run History Table */}
-          <div className="flex-1 flex flex-col min-h-0 bg-white border border-[#E5E7EB] rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#F3F4F6] flex items-center justify-between bg-white shrink-0">
+          <div className="flex-1 flex flex-col min-h-0 bg-app-surface border border-app-border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-app-border flex items-center justify-between bg-app-surface shrink-0">
               <div className="flex items-center gap-2">
-                <Activity size={16} className="text-blue-600" />
-                <h3 className="text-sm font-bold text-[#111827]">
+                <Activity size={16} className="text-app-brand" />
+                <h3 className="text-sm font-bold text-app-primary">
                   Run History
                 </h3>
               </div>
@@ -171,17 +171,17 @@ export function PipelineDetail({
                 <div className="relative">
                   <Search
                     size={14}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 text-[#9CA3AF]"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 text-app-secondary"
                   />
                   <input
                     type="text"
                     placeholder="Search by Run ID, Status, Started..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8 pr-3 py-1.5 text-xs border border-[#E5E7EB] rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-64"
+                    className="pl-8 pr-3 py-1.5 text-xs border border-app-border rounded-md focus:outline-none focus:ring-1 focus:ring-app-brand/30 focus:border-app-brand w-64 bg-app-input text-app-primary placeholder:text-app-secondary"
                   />
                 </div>
-                <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">
                   Latest {sortedRuns.length} Runs
                 </span>
               </div>
@@ -190,8 +190,8 @@ export function PipelineDetail({
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               {sortedRuns.length === 0 ? (
                 <div className="py-20 text-center">
-                  <Clock className="w-10 h-10 text-[#E5E7EB] mx-auto mb-3" />
-                  <p className="text-xs text-[#9CA3AF] font-medium">
+                  <Clock className="w-10 h-10 text-app-secondary mx-auto mb-3" />
+                  <p className="text-xs text-app-secondary font-medium">
                     {searchTerm
                       ? "No runs match your search."
                       : "No run history found for this pipeline."}
@@ -200,7 +200,7 @@ export function PipelineDetail({
               ) : (
                 <table className="w-full text-left">
                   <thead className="sticky top-0 z-10">
-                    <tr className="bg-[#F9FAFB] text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] shadow-[0_1px_0_#F3F4F6]">
+                    <tr className="bg-app-bg text-[10px] font-bold uppercase tracking-widest text-app-secondary border-b border-app-border">
                       <th className="px-6 py-3">Run ID</th>
                       <th className="px-6 py-3">Status</th>
                       <th
@@ -214,14 +214,14 @@ export function PipelineDetail({
                               size={12}
                               className={cn(
                                 "transition-colors",
-                                "text-blue-600",
+                                "text-app-brand",
                               )}
                             />
                             <ArrowDown
                               size={12}
                               className={cn(
                                 "transition-colors",
-                                "text-blue-600",
+                                "text-app-brand",
                               )}
                             />
                           </span>
@@ -232,14 +232,14 @@ export function PipelineDetail({
                       <th className="px-6 py-3 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#F3F4F6]">
+                  <tbody className="divide-y divide-app-border">
                     {sortedRuns.map((run) => (
                       <tr
                         key={run.id}
-                        className="hover:bg-[#F9FAFB] transition-colors group"
+                        className="hover:bg-app-input cursor-pointer transition-colors group"
                       >
                         <td className="px-6 py-4">
-                          <span className="text-xs font-mono font-bold text-[#111827] group-hover:text-blue-600 transition-colors">
+                          <span className="text-xs font-mono font-bold text-app-primary group-hover:text-app-brand transition-colors">
                             {run.external_run_id}
                           </span>
                         </td>
@@ -248,30 +248,30 @@ export function PipelineDetail({
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-[#4B5563]">
+                            <span className="text-[11px] font-bold text-app-secondary">
                               {formatDateTime(run.started_at)}
                             </span>
-                            <span className="text-[10px] text-[#9CA3AF] font-medium">
+                            <span className="text-[10px] text-app-secondary font-medium">
                               {timeAgo(run.started_at)}
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-xs font-mono font-medium text-[#4B5563]">
+                          <span className="text-xs font-mono font-medium text-app-secondary">
                             {formatDuration(run.duration_seconds)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           {run.analysis ? (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-[10px] font-bold text-blue-600 border border-blue-100 uppercase tracking-tight">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-app-surface text-[10px] font-bold text-sky-400 border border-sky-500/30 uppercase tracking-tight">
                               <Sparkles size={10} /> Available
                             </span>
                           ) : run.status === "FAILED" ? (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-[10px] font-bold text-amber-600 border border-amber-100 uppercase tracking-tight">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-app-surface text-[10px] font-bold text-amber-400 border border-amber-500/30 uppercase tracking-tight">
                               <AlertCircle size={10} /> Pending
                             </span>
                           ) : (
-                            <span className="text-[10px] text-[#9CA3AF] font-mono">
+                            <span className="text-[10px] text-app-secondary font-mono">
                               —
                             </span>
                           )}
@@ -279,7 +279,7 @@ export function PipelineDetail({
                         <td className="px-6 py-4 text-right">
                           <button
                             onClick={() => onViewRun(run.id)}
-                            className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-all"
+                            className="text-[10px] font-black uppercase tracking-widest text-app-brand hover:text-blue-700 transition-all"
                           >
                             Details →
                           </button>

@@ -50,10 +50,10 @@ export function InfoHint({
 
       {open && (
         <div
-          className={`absolute z-50 top-6 ${pos} w-72 bg-[#111827] text-white text-[11px] leading-relaxed rounded-lg shadow-xl px-3.5 py-3 pointer-events-none`}
+          className={`absolute z-50 top-6 ${pos} w-72 bg-app-input text-app-primary text-[11px] leading-relaxed rounded-lg shadow-xl px-3.5 py-3 pointer-events-none`}
         >
           {title && (
-            <div className="font-bold text-white mb-1.5 tracking-wide">
+            <div className="font-bold text-app-primary mb-1.5 tracking-wide">
               {title}
             </div>
           )}

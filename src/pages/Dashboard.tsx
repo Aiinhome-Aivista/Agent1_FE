@@ -49,12 +49,12 @@ export function DashboardPage() {
 
   const reload = async () => {
     setLoading(true);
-    refresh();
 
     try {
-      const [cRes, sRes] = await Promise.allSettled([
+      const [cRes, sRes, _] = await Promise.allSettled([
         api.connectors(),
         api.stats(),
+        refresh(),
       ]);
       if (cRes.status === "fulfilled") setConnectors(cRes.value);
       if (sRes.status === "fulfilled") setStats(sRes.value);
@@ -74,13 +74,13 @@ export function DashboardPage() {
   );
 
   const STATUS_COLORS: Record<string, string> = {
-    HEALTHY: "#c5f24a",
-    SUCCEEDED: "#c5f24a",
-    UNHEALTHY: "#ff5d73",
-    FAILED: "#ff5d73",
-    DEGRADED: "#ffb547",
-    PAUSED: "#5b6573",
-    CANCELLED: "#5b6573",
+    HEALTHY: "#FF5A14",
+    SUCCEEDED: "#FF5A14",
+    UNHEALTHY: "#888888",
+    FAILED: "#888888",
+    DEGRADED: "#FF8A55",
+    PAUSED: "#D8D8D8",
+    CANCELLED: "#D8D8D8",
     UNKNOWN: "#3b4653",
   };
 
@@ -137,34 +137,34 @@ export function DashboardPage() {
                 label="Connectors"
                 value={stats?.total_connectors ?? connectors.length}
                 icon={Plug}
-                accent="cyan"
+                accent="pwc"
                 sub={`${connectors.filter((c) => c.status.toUpperCase() === "CONNECTED").length} connected`}
               />
               <StatCard
                 label="Pipelines"
                 value={stats?.total_pipelines ?? state.pipelines.length}
                 icon={Activity}
-                accent="violet"
+                accent="pwc"
                 sub="tracked"
               />
               <StatCard
                 label="Runs / 24h"
                 value={stats?.runs_last_24h ?? 0}
                 icon={Sparkles}
-                accent="lime"
+                accent="pwc"
               />
               <StatCard
                 label="Success rate"
                 value={`${stats?.success_rate_24h ?? 0}%`}
                 icon={CheckCircle2}
-                accent={stats && stats.success_rate_24h < 80 ? "rose" : "lime"}
+                accent="pwc"
                 sub="last 24h"
               />
               <StatCard
                 label="Failures"
                 value={stats?.failed_runs_24h ?? 0}
                 icon={AlertTriangle}
-                accent="rose"
+                accent="pwc"
                 sub={`${stats?.pending_analyses ?? 0} pending analysis`}
               />
             </div>
@@ -172,7 +172,7 @@ export function DashboardPage() {
             {/* Charts row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Status Distribution */}
-              <div className="bg-white border border-[#E5E7EB] p-7 rounded-lg">
+              <div className="bg-app-surface border border-app-border p-7 rounded-lg">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-[#9CA3AF]">
@@ -239,15 +239,15 @@ export function DashboardPage() {
                           background: STATUS_COLORS[d.name] || "#3b4653",
                         }}
                       />
-                      <span className="text-[#6B7280]">{d.name}</span>
-                      <span className="text-[#111827]">{d.value}</span>
+                      <span className="text-app-secondary">{d.name}</span>
+                      <span className="text-app-primary">{d.value}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Connectors by Type */}
-              <div className="bg-white border border-[#E5E7EB] p-7 rounded-lg">
+              <div className="bg-app-surface border border-app-border p-7 rounded-lg">
                 <div className="flex items-center justify-between mb-6">
                   <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-[#9CA3AF]">
                     Connectors by type
@@ -299,7 +299,7 @@ export function DashboardPage() {
                         />
                         <Bar
                           dataKey="value"
-                          fill="#3B82F6"
+                          fill="#FF5A14"
                           radius={[4, 4, 0, 0]}
                           barSize={60}
                         />
@@ -310,16 +310,16 @@ export function DashboardPage() {
               </div>
 
               {/* Live Event Feed */}
-              <div className="bg-white border border-[#E5E7EB] rounded-lg flex flex-col overflow-hidden">
-                <div className="px-7 py-5 border-b border-[#E5E7EB] flex items-center justify-between">
+              <div className="bg-app-surface border border-app-border rounded-lg flex flex-col overflow-hidden">
+                <div className="px-7 py-5 border-b border-app-border flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60 animate-ping" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-app-brand opacity-60 animate-ping" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-app-btn" />
                     </span>
                     <h4 className="text-sm font-semibold">Live Event Feed</h4>
                   </div>
-                  <span className="text-[10px] text-[#6B7280] font-mono">
+                  <span className="text-[10px] text-app-secondary font-mono">
                     listening...
                   </span>
                 </div>
@@ -335,7 +335,7 @@ export function DashboardPage() {
                     state.logs.map((log) => (
                       <div
                         key={log.id}
-                        className="flex gap-4 group p-1 rounded-md hover:bg-[#F9FAFB] transition-colors"
+                        className="flex gap-4 group p-1 rounded-md hover:bg-app-bg transition-colors"
                       >
                         <span className="text-[10px] font-mono text-[#9CA3AF] whitespace-nowrap mt-0.5">
                           {formatTime(log.time)}
@@ -349,13 +349,13 @@ export function DashboardPage() {
                                 : log.type === "warn"
                                   ? "text-amber-500"
                                   : log.type === "agent"
-                                    ? "text-blue-500"
+                                    ? "text-app-brand"
                                     : "text-emerald-500",
                             )}
                           >
                             {log.type}
                           </span>
-                          <span className="text-xs text-[#4B5563] truncate">
+                          <span className="text-xs text-app-secondary truncate">
                             {log.msg}
                           </span>
                         </div>
@@ -373,14 +373,14 @@ export function DashboardPage() {
                 icon={AlertTriangle}
                 pipelines={failedPipelines}
                 empty="No failures — systems stable."
-                accent="rose"
+                accent="pwc"
               />
               <PipelineList
                 title="Currently Active"
                 icon={Activity}
                 pipelines={runningPipelines}
                 empty="No active jobs running."
-                accent="cyan"
+                accent="pwc"
               />
             </div>
           </div>

@@ -49,7 +49,7 @@ export function GlobalToaster() {
             onClick={() =>
               setToasts((prev) => prev.filter((t) => t.id !== toast.id))
             }
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+            className="rounded-lg p-1.5 text-gray-400 hover:bg-app-surface/5 hover:text-app-primary transition-colors"
           >
             <X className="h-3.5 w-3.5" />
           </button>

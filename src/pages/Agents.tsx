@@ -27,8 +27,8 @@ const ROLE_ICON = {
 } as const;
 
 const ROLE_COLOR: Record<string, { bg: string; ring: string; text: string; soft: string }> = {
-  orchestrator: { bg: 'bg-slate-50', ring: 'border-slate-200', text: 'text-slate-700', soft: 'bg-slate-500' },
-  monitoring: { bg: 'bg-blue-50', ring: 'border-blue-200', text: 'text-blue-700', soft: 'bg-blue-500' },
+  orchestrator: { bg: 'bg-app-surface', ring: 'border-app-border', text: 'text-slate-700', soft: 'bg-app-surface0' },
+  monitoring: { bg: 'bg-blue-50', ring: 'border-blue-200', text: 'text-blue-700', soft: 'bg-app-btn' },
   diagnosis: { bg: 'bg-purple-50', ring: 'border-purple-200', text: 'text-purple-700', soft: 'bg-purple-500' },
   remediation: { bg: 'bg-amber-50', ring: 'border-amber-200', text: 'text-amber-700', soft: 'bg-amber-500' },
   optimization: { bg: 'bg-emerald-50', ring: 'border-emerald-200', text: 'text-emerald-700', soft: 'bg-emerald-500' },
@@ -56,7 +56,7 @@ export function AgentsPage() {
         <main className="flex-1 overflow-y-auto p-10 custom-scrollbar">
         <div className="max-w-7xl mx-auto space-y-10">
           {/* Mesh diagram */}
-          <section className="bg-white border border-[#E5E7EB] rounded-lg p-10 grid-backdrop">
+          <section className="bg-app-surface border border-app-border rounded-lg p-10 grid-backdrop">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-sm font-semibold">Hierarchical Dispatch</h3>
@@ -64,7 +64,7 @@ export function AgentsPage() {
                   Orchestrator → specialized agents
                 </p>
               </div>
-              <span className="text-[10px] text-[#6B7280] font-mono">
+              <span className="text-[10px] text-app-secondary font-mono">
                 {state.agents.length} agents · {tools.length} tools
               </span>
             </div>
@@ -89,7 +89,7 @@ export function AgentsPage() {
 
           {/* Per-agent detail */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white border border-[#E5E7EB] rounded-lg p-7">
+            <div className="bg-app-surface border border-app-border rounded-lg p-7">
               <h4 className="text-sm font-semibold mb-1">Live Reasoning Stream</h4>
               <p className="text-[10px] uppercase tracking-[0.18em] text-[#9CA3AF] font-bold mb-5">
                 Filter: agents only
@@ -101,7 +101,7 @@ export function AgentsPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-[#E5E7EB] rounded-lg p-7">
+            <div className="bg-app-surface border border-app-border rounded-lg p-7">
               <h4 className="text-sm font-semibold mb-1">Tool Registry</h4>
               <p className="text-[10px] uppercase tracking-[0.18em] text-[#9CA3AF] font-bold mb-5">
                 Schema-driven, idempotent, timeout-bounded
@@ -110,7 +110,7 @@ export function AgentsPage() {
                 {tools.map((t) => (
                   <div
                     key={t.name}
-                    className="border border-[#E5E7EB] rounded p-4 hover:border-gray-300 transition-colors"
+                    className="border border-app-border rounded p-4 hover:border-app-border transition-colors"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-mono text-[12px] font-semibold">{t.name}</span>
@@ -127,7 +127,7 @@ export function AgentsPage() {
                         {t.risk}
                       </span>
                     </div>
-                    <p className="text-[11px] text-[#6B7280]">{t.description}</p>
+                    <p className="text-[11px] text-app-secondary">{t.description}</p>
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                       {Object.entries(t.args_schema).map(([k, v]) => (
                         <span key={k} className="tag-chip">
@@ -141,7 +141,7 @@ export function AgentsPage() {
             </div>
           </section>
 
-          <section className="bg-white border border-[#E5E7EB] rounded-lg p-8">
+          <section className="bg-app-surface border border-app-border rounded-lg p-8">
             <div className="flex items-center gap-2 mb-6">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <h4 className="text-sm font-semibold">Five-Rail Guardrail Framework</h4>
@@ -156,15 +156,15 @@ export function AgentsPage() {
               ].map((rail, idx) => (
                 <div
                   key={rail.label}
-                  className="border border-[#E5E7EB] rounded p-4 relative"
+                  className="border border-app-border rounded p-4 relative"
                 >
-                  <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-[#111827] text-white text-[10px] font-mono font-bold flex items-center justify-center">
+                  <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-app-input text-app-primary text-[10px] font-mono font-bold flex items-center justify-center">
                     {idx + 1}
                   </div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#111827] mb-1">
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-app-primary mb-1">
                     {rail.label}
                   </p>
-                  <p className="text-[11px] text-[#6B7280] leading-snug">{rail.desc}</p>
+                  <p className="text-[11px] text-app-secondary leading-snug">{rail.desc}</p>
                 </div>
               ))}
             </div>
@@ -183,7 +183,7 @@ function AgentNode({ agent, hero = false }: { agent: AgentStatus; hero?: boolean
   return (
     <div
       className={cn(
-        'relative bg-white border rounded-lg p-5 transition-all',
+        'relative bg-app-surface border rounded-lg p-5 transition-all',
         C.ring,
         hero ? 'w-72' : '',
         live ? 'shadow-md' : 'shadow-sm',
@@ -213,13 +213,13 @@ function AgentNode({ agent, hero = false }: { agent: AgentStatus; hero?: boolean
               live ? `${C.soft} pulse-blue` : 'bg-[#D1D5DB]',
             )}
           />
-          <span className="text-[9px] uppercase tracking-[0.15em] font-bold text-[#6B7280]">
+          <span className="text-[9px] uppercase tracking-[0.15em] font-bold text-app-secondary">
             {agent.status}
           </span>
         </div>
       </div>
       <h4 className="text-sm font-semibold capitalize">{agent.role}</h4>
-      <p className="text-[11px] text-[#6B7280] mt-1 leading-snug min-h-[28px]">
+      <p className="text-[11px] text-app-secondary mt-1 leading-snug min-h-[28px]">
         {agent.description}
       </p>
       {agent.last_action && (
@@ -227,7 +227,7 @@ function AgentNode({ agent, hero = false }: { agent: AgentStatus; hero?: boolean
           <p className="text-[9px] uppercase tracking-[0.18em] text-[#9CA3AF] font-bold">
             Last Action
           </p>
-          <p className="text-[11px] text-[#4B5563] truncate mt-0.5">{agent.last_action}</p>
+          <p className="text-[11px] text-app-secondary truncate mt-0.5">{agent.last_action}</p>
         </div>
       )}
       <div className="mt-3 flex items-center justify-between">
@@ -254,7 +254,7 @@ function LiveLogStreamDark({ logs }: { logs: any[] }) {
     <div className="font-mono space-y-1.5 text-[11px]">
       {logs.slice(0, 60).map((log) => (
         <div key={log.id} className="flex gap-3">
-          <span className="text-[#475569] w-16 shrink-0">[{log.time}]</span>
+          <span className="text-app-secondary w-16 shrink-0">[{log.time}]</span>
           <span
             className={cn(
               'font-bold uppercase w-14 shrink-0',

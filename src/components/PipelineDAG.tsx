@@ -18,8 +18,8 @@ const ICONS: Record<string, ReactNode> = {
 };
 
 const TYPE_STYLES: Record<string, string> = {
-  sensor: "bg-blue-50 text-blue-600 border-blue-100",
-  ingest: "bg-blue-50 text-blue-600 border-blue-100",
+  sensor: "bg-blue-50 text-app-brand border-blue-100",
+  ingest: "bg-blue-50 text-app-brand border-blue-100",
   transform: "bg-purple-50 text-purple-600 border-purple-100",
   load: "bg-emerald-50 text-emerald-600 border-emerald-100",
 };
@@ -32,7 +32,7 @@ export function PipelineDAG({
 }: Props) {
   if (!nodes || nodes.length === 0) {
     return (
-      <div className="relative flex flex-col items-center justify-center py-12 grid-backdrop rounded-lg border border-dashed border-[#E5E7EB]">
+      <div className="relative flex flex-col items-center justify-center py-12 grid-backdrop rounded-lg border border-dashed border-app-border">
         <Workflow className="w-8 h-8 text-[#E5E7EB] mb-2" />
         <p className="text-xs text-[#9CA3AF] italic">
           No architecture metadata available for this pipeline.
@@ -43,7 +43,7 @@ export function PipelineDAG({
 
   if (orientation === "vertical") {
     return (
-      <div className="relative flex flex-col gap-7 items-center py-8 grid-backdrop rounded-lg border border-dashed border-[#E5E7EB]">
+      <div className="relative flex flex-col gap-7 items-center py-8 grid-backdrop rounded-lg border border-dashed border-app-border">
         {nodes.map((node, idx) => (
           <div key={node.id} className="relative flex flex-col items-center">
             <NodeCard
@@ -61,7 +61,7 @@ export function PipelineDAG({
   }
 
   return (
-    <div className="relative grid-backdrop rounded-lg border border-dashed border-[#E5E7EB] py-10 px-6 overflow-x-auto">
+    <div className="relative grid-backdrop rounded-lg border border-dashed border-app-border py-10 px-6 overflow-x-auto">
       <div className="flex items-center gap-2 min-w-max">
         {nodes.map((node, idx) => (
           <div key={node.id} className="flex items-center gap-2">
@@ -100,11 +100,11 @@ function NodeCard({
   return (
     <div
       className={cn(
-        "bg-white border rounded-md shadow-sm transition-all relative",
+        "bg-app-surface border rounded-md shadow-sm transition-all relative",
         compact ? "p-2.5 w-48" : "p-3.5 w-56",
         failed
           ? "border-red-300 ring-2 ring-red-100"
-          : "border-[#E5E7EB] hover:border-gray-300",
+          : "border-app-border hover:border-app-border",
       )}
     >
       {failed && (
@@ -129,7 +129,7 @@ function NodeCard({
       </div>
       <h6
         className={cn(
-          "font-bold text-[#111827] truncate",
+          "font-bold text-app-primary truncate",
           compact ? "text-[11px]" : "text-xs",
         )}
       >

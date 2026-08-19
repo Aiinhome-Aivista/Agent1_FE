@@ -180,25 +180,25 @@ export function RunbooksPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#F9FAFB]">
+    <div className="flex-1 flex flex-col min-h-0 bg-app-bg">
       {loading ? (
         <Loading message="Fetching runbooks..." />
       ) : (
         <main className="flex-1 overflow-y-auto p-10 custom-scrollbar">
           <div className="max-w-7xl mx-auto space-y-8">
           {/* Header strip */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-200/60">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-app-border">
             <div>
               <div className="flex items-center gap-2">
                 <BookOpen
-                  className="w-5 h-5 text-gray-700"
+                  className="w-5 h-5 text-app-secondary"
                   strokeWidth={2.25}
                 />
-                <h1 className="text-xl font-bold tracking-tight text-[#111827]">
+                <h1 className="text-xl font-bold tracking-tight text-app-primary">
                   Runbooks
                 </h1>
               </div>
-              <p className="text-xs text-[#6B7280] mt-1">
+              <p className="text-xs text-app-secondary mt-1">
                 Upload PDF/DOCX runbooks · stored locally · indexed into the RAG
                 vector store
               </p>
@@ -206,7 +206,7 @@ export function RunbooksPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={fetchAll}
-                className="inline-flex items-center gap-1 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-sm"
+                className="inline-flex items-center gap-1 px-3 py-2 bg-app-surface border border-app-border hover:bg-app-bg text-app-secondary text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-sm"
                 title="Refresh"
               >
                 <RefreshCw
@@ -216,9 +216,9 @@ export function RunbooksPage() {
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#111827] hover:bg-black text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-md active:scale-95"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-app-brand hover:bg-[#E04B0E] shadow-md hover:shadow-[0_4px_20px_rgba(255,90,20,0.2)] text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-md active:scale-95"
               >
-                <Plus className="w-4 h-4 text-sky-400" strokeWidth={2.5} />
+                <Plus className="w-4 h-4 text-white/90" strokeWidth={2.5} />
                 Upload Runbook
               </button>
             </div>
@@ -226,7 +226,7 @@ export function RunbooksPage() {
 
           {/* Error banner */}
           {error && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs px-3 py-2 rounded-lg flex items-start gap-2">
+            <div className="bg-app-surface border border-app-secondary text-app-secondary text-xs px-3 py-2 rounded-lg flex items-start gap-2">
               <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -238,46 +238,46 @@ export function RunbooksPage() {
               label="Total Runbooks"
               value={stats.total}
               icon={BookOpen}
-              accent="violet"
+              accent="pwc"
               sub="tracked operational SOPs"
             />
             <StatCard
               label="Active"
               value={stats.active}
               icon={CheckCircle2}
-              accent="emerald"
+              accent="pwc"
               sub="indexed in vector DB"
             />
             <StatCard
               label="Processing"
               value={stats.processing}
               icon={Loader2}
-              accent="amber"
+              accent="pwc"
               sub="being chunked & embedded"
             />
             <StatCard
               label="Indexed Chunks"
               value={stats.indexed}
               icon={Sparkles}
-              accent="cyan"
+              accent="pwc"
               sub="vectors in Chroma"
             />
           </div>
 
           {/* Toolbar */}
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#E5E7EB] p-3 rounded-xl shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-app-surface border border-app-border p-3 rounded-xl shadow-sm">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-app-secondary" />
                 <input
                   type="text"
                   placeholder="Search runbooks, tags, or descriptions…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-xs bg-[#F9FAFB] border border-transparent rounded-lg focus:border-gray-300 focus:bg-white outline-none transition-colors"
+                  className="w-full pl-10 pr-4 py-2 text-xs bg-app-bg border border-transparent rounded-lg focus:border-app-border focus:bg-app-surface outline-none transition-colors"
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-1 bg-[#F9FAFB] p-1 rounded-lg border border-gray-100">
+              <div className="flex flex-wrap items-center gap-1 bg-app-bg p-1 rounded-lg border border-app-border">
                 {(
                   [
                     "ALL",
@@ -293,8 +293,8 @@ export function RunbooksPage() {
                     className={cn(
                       "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-md transition-all whitespace-nowrap",
                       filter === tab
-                        ? "bg-[#111827] text-white shadow-sm"
-                        : "text-[#6B7280] hover:bg-gray-200/50 hover:text-[#111827]",
+                        ? "bg-app-surface border border-app-brand text-app-brand shadow-[0_0_10px_rgba(255,90,20,0.1)]"
+                        : "text-app-secondary hover:bg-app-bg hover:text-app-brand border border-transparent",
                     )}
                   >
                     {tab}
@@ -305,99 +305,99 @@ export function RunbooksPage() {
 
             {/* Table / empty */}
             {loading ? (
-              <div className="bg-white border border-[#E5E7EB] rounded-xl p-16 text-center shadow-sm">
+              <div className="bg-app-surface border border-app-border rounded-xl p-16 text-center shadow-sm">
                 <Loader2 className="w-6 h-6 text-gray-400 animate-spin mx-auto" />
-                <p className="text-xs text-gray-500 mt-3">Loading runbooks…</p>
+                <p className="text-xs text-app-secondary mt-3">Loading runbooks…</p>
               </div>
             ) : filtered.length === 0 ? (
-              <div className="bg-white border border-[#E5E7EB] rounded-xl p-16 text-center shadow-sm flex flex-col items-center">
-                <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4 shadow-inner">
-                  <FileText className="w-6 h-6 text-gray-400 stroke-1" />
+              <div className="bg-app-surface border border-app-border rounded-xl p-16 text-center shadow-sm flex flex-col items-center">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-app-surface to-app-bg border border-app-border-orange/30 flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(255,90,20,0.05)]">
+                  <FileText className="w-6 h-6 text-app-brand opacity-80 stroke-1" />
                 </div>
-                <h3 className="text-base font-bold text-[#111827]">
+                <h3 className="text-base font-bold text-app-primary">
                   No Runbooks Found
                 </h3>
-                <p className="text-xs text-[#6B7280] max-w-sm mt-1.5 leading-relaxed">
+                <p className="text-xs text-app-secondary max-w-sm mt-1.5 leading-relaxed">
                   Upload a PDF or DOCX so AI agents can retrieve it during
                   incident diagnosis.
                 </p>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 bg-[#111827] hover:bg-black text-white text-xs font-bold uppercase tracking-widest rounded-lg shadow active:scale-95"
+                  className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 bg-app-brand hover:bg-[#E04B0E] text-white shadow-md hover:shadow-[0_4px_20px_rgba(255,90,20,0.2)] transition-all duration-300 text-xs font-bold uppercase tracking-widest rounded-lg shadow active:scale-95"
                 >
-                  <Plus className="w-3.5 h-3.5 text-sky-400" /> Upload first
+                  <Plus className="w-3.5 h-3.5 text-white/90" /> Upload first
                   runbook
                 </button>
               </div>
             ) : (
-              <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-app-surface border border-app-border rounded-xl overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
+                    <tr className="bg-app-bg border-b border-app-border">
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-app-secondary">
                         Runbook
                       </th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-app-secondary">
                         Category
                       </th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-app-secondary">
                         Source
                       </th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-app-secondary">
                         Chunks
                       </th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-app-secondary">
                         Status
                       </th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-app-secondary">
                         Updated
                       </th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
+                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-app-secondary">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#F3F4F6]">
+                  <tbody className="divide-y divide-app-border">
                     {filtered.map((rb) => (
                       <tr
                         key={rb.id}
                         onClick={() => setSelectedRunbookId(rb.id)}
-                        className="hover:bg-[#F9FAFB] transition-colors group cursor-pointer"
+                        className="hover:bg-app-bg transition-colors group cursor-pointer"
                       >
                         <td className="px-6 py-4 min-w-[220px]">
                           <div className="flex flex-col">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-[#111827] group-hover:text-blue-600 transition-colors">
+                              <span className="text-xs font-bold text-app-primary group-hover:text-app-brand transition-colors">
                                 {rb.title}
                               </span>
                               {rb.rag_enabled && (
                                 <span
-                                  className="bg-blue-50 text-blue-600 border border-blue-100 text-[8px] font-bold uppercase px-1.5 py-0.2 rounded"
+                                  className="bg-app-surface border border-app-brand text-app-brand shadow-[0_0_10px_rgba(255,90,20,0.1)] text-[8px] font-bold uppercase px-1.5 py-0.2 rounded"
                                   title="Indexed in vector DB"
                                 >
                                   RAG
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-[#9CA3AF] font-medium mt-0.5 line-clamp-1 max-w-md">
+                            <span className="text-[10px] text-app-secondary font-medium mt-0.5 line-clamp-1 max-w-md">
                               {rb.description || rb.source_filename}
                             </span>
                           </div>
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-gray-100 text-gray-700 rounded-md">
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-app-surface border border-app-border text-app-primary rounded-md shadow-sm">
                             {rb.category}
                           </span>
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-[11px] font-mono font-semibold text-gray-600 bg-gray-50 border border-gray-200/60 px-1.5 py-0.5 rounded">
+                          <span className="text-[11px] font-mono font-semibold text-app-secondary bg-app-surface border border-app-border px-1.5 py-0.5 rounded">
                             {rb.source}
                           </span>
                         </td>
 
-                        <td className="px-6 py-4 whitespace-nowrap text-[11px] font-semibold text-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-[11px] font-semibold text-app-secondary">
                           {rb.chunk_count ?? 0}
                         </td>
 
@@ -406,12 +406,12 @@ export function RunbooksPage() {
                             className={cn(
                               "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full inline-flex items-center gap-1 border",
                               rb.status === "ACTIVE"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                ? "bg-app-surface text-app-brand border-app-brand shadow-[0_0_8px_rgba(255,90,20,0.1)]"
                                 : rb.status === "PROCESSING"
-                                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  ? "bg-app-surface text-app-primary border-app-btn"
                                   : rb.status === "FAILED"
-                                    ? "bg-rose-50 text-rose-700 border-rose-200"
-                                    : "bg-gray-50 text-gray-400 border-gray-200",
+                                    ? "bg-app-surface text-app-secondary border-app-secondary"
+                                    : "bg-app-surface text-gray-400 border-app-border",
                             )}
                           >
                             {rb.status === "PROCESSING" && (
@@ -421,7 +421,7 @@ export function RunbooksPage() {
                           </span>
                         </td>
 
-                        <td className="px-6 py-4 whitespace-nowrap text-[11px] font-medium text-[#9CA3AF]">
+                        <td className="px-6 py-4 whitespace-nowrap text-[11px] font-medium text-app-secondary">
                           {timeAgo(
                             rb.last_updated ||
                               rb.updated_at ||
@@ -437,13 +437,13 @@ export function RunbooksPage() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => setSelectedRunbookId(rb.id)}
-                              className="text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] hover:text-[#111827] inline-flex items-center gap-1 transition-all"
+                              className="text-[10px] font-bold uppercase tracking-widest text-app-secondary hover:text-app-brand inline-flex items-center gap-1 transition-all"
                             >
                               view
                             </button>
                             <button
                               onClick={() => setRunbookToDelete(rb.id)}
-                              className="p-1 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+                              className="p-1 text-app-secondary hover:text-app-brand hover:bg-app-surface border border-transparent hover:border-app-border rounded transition-all"
                               title="Delete runbook + vectors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -487,7 +487,7 @@ export function RunbooksPage() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
-              className="bg-white rounded-2xl border border-[#E5E7EB] w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-6"
+              className="bg-app-surface rounded-2xl border border-app-border w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start gap-4">
@@ -495,12 +495,12 @@ export function RunbooksPage() {
                   <AlertCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-[#111827]">
+                  <h3 className="text-base font-bold text-app-primary">
                     Delete Operational Runbook?
                   </h3>
-                  <p className="text-xs text-[#6B7280] mt-1.5 leading-relaxed">
+                  <p className="text-xs text-app-secondary mt-1.5 leading-relaxed">
                     You are about to permanently delete{" "}
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-app-primary">
                       "{targetRb?.title}"
                     </span>
                     . This will immediately purge its indexed vector chunks from
@@ -509,12 +509,12 @@ export function RunbooksPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-app-border">
                 <button
                   type="button"
                   onClick={() => setRunbookToDelete(null)}
                   disabled={deleting}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#6B7280] hover:text-[#111827] disabled:opacity-40"
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-app-secondary hover:text-app-brand disabled:opacity-40"
                 >
                   Cancel
                 </button>

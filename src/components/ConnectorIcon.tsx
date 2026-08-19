@@ -21,7 +21,7 @@ export function ConnectorIcon({ type, size = 16, className, withLabel = false }:
   return (
     <span className={cn("inline-flex items-center gap-2 align-middle", className)}>
       <Icon size={size} className={conf.color} strokeWidth={2.25} />
-      {withLabel && <span className="font-mono text-xs text-[#6B7280]">{conf.label}</span>}
+      {withLabel && <span className="font-mono text-xs text-app-secondary">{conf.label}</span>}
     </span>
   );
 }

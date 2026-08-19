@@ -25,7 +25,7 @@ const TYPE_BADGE: Record<string, string> = {
   Logs: "bg-amber-50 text-amber-700 border-amber-100",
   Ticketing: "bg-emerald-50 text-emerald-700 border-emerald-100",
   Communication: "bg-pink-50 text-pink-700 border-pink-100",
-  Git: "bg-gray-50 text-gray-700 border-gray-100",
+  Git: "bg-app-surface text-gray-700 border-app-border",
   Runtime: "bg-indigo-50 text-indigo-700 border-indigo-100",
   Cloud: "bg-sky-50 text-sky-700 border-sky-100",
 };
@@ -131,7 +131,7 @@ export function ConnectorsPage() {
                 connectors.filter((c) => c.status.toUpperCase() === "CONNECTED")
                   .length
               }
-              accent="text-emerald-600"
+              accent="text-app-brand"
             />
             <Counter
               label="Error"
@@ -139,18 +139,18 @@ export function ConnectorsPage() {
                 connectors.filter((c) => c.status.toUpperCase() === "ERROR")
                   .length
               }
-              accent="text-red-600"
+              accent="text-app-secondary"
             />
             <Counter
               label="Categories"
               value={Object.keys(grouped).length}
-              accent="text-[#6B7280]"
+              accent="text-app-secondary"
             />
           </div>
 
           {/* Empty State */}
           {connectors.length === 0 && (
-            <div className="relative overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-12 text-center shadow-sm transition-all hover:shadow-md">
+            <div className="relative overflow-hidden rounded-2xl border border-app-border bg-app-surface p-12 text-center shadow-sm transition-all hover:shadow-md">
               <div className="absolute -top-24 left-1/2 h-48 w-96 -translate-x-1/2 rounded-full bg-gradient-to-b from-sky-50 via-indigo-50/50 to-transparent blur-2xl pointer-events-none" />
               
               <div className="relative z-10 flex flex-col items-center">
@@ -158,10 +158,10 @@ export function ConnectorsPage() {
                   <Plug className="h-8 w-8 text-sky-400" strokeWidth={2} />
                 </div>
 
-                <h3 className="text-xl font-bold tracking-tight text-[#111827]">
+                <h3 className="text-xl font-bold tracking-tight text-app-primary">
                   No Source Connectors Found
                 </h3>
-                <p className="mt-2 max-w-md text-xs leading-relaxed text-[#6B7280]">
+                <p className="mt-2 max-w-md text-xs leading-relaxed text-app-secondary">
                   Get started by securely connecting your cloud platforms, metadata databases, or repositories. Once linked, the Agent Mesh will autonomously monitor pipeline health and trigger incident workflows.
                 </p>
 
@@ -170,7 +170,7 @@ export function ConnectorsPage() {
                     setOpenOnNew(true);
                     setOpen(true);
                   }}
-                  className="mt-8 inline-flex items-center gap-2 rounded-xl bg-[#111827] px-5 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-lg shadow-gray-900/10 transition-all hover:bg-black hover:scale-105 active:scale-95"
+                  className="mt-8 inline-flex items-center gap-2 rounded-xl bg-app-input px-5 py-3 text-xs font-bold uppercase tracking-widest text-app-primary shadow-lg shadow-gray-900/10 transition-all hover:bg-app-hover hover:scale-105 active:scale-95"
                 >
                   <Plus className="h-4 w-4 text-sky-400" strokeWidth={2.5} />
                   Connect First Source
@@ -204,18 +204,18 @@ export function ConnectorsPage() {
                   return (
                     <div
                       key={c.id}
-                      className="group bg-white border border-[#E5E7EB] rounded-xl p-6 hover:border-gray-300 hover:shadow-lg transition-all duration-300"
+                      className="group bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl p-6 hover:border-app-border-orange hover:shadow-[0_4px_20px_rgba(255,90,20,0.05)] transition-all duration-300 relative overflow-hidden"
                     >
                       <div className="flex items-start justify-between mb-6">
                         <div>
-                          <p className="text-sm font-black text-[#111827] tracking-tight">
+                          <p className="text-lg font-bold text-app-primary tracking-tight">
                             {c.name}
                           </p>
                           <div
                             className={cn(
                               "mt-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest inline-block border",
                               TYPE_BADGE[c.type] ||
-                                "bg-gray-50 text-gray-400 border-gray-100",
+                                "bg-app-surface text-gray-400 border-app-border",
                             )}
                           >
                             {c.type}
@@ -226,16 +226,16 @@ export function ConnectorsPage() {
                             className={cn(
                               "w-2 h-2 rounded-full",
                               c.status.toUpperCase() === "CONNECTED"
-                                ? "bg-emerald-500"
-                                : "bg-red-500",
+                                ? "bg-app-brand"
+                                : "bg-app-secondary",
                             )}
                           />
                           <span
                             className={cn(
                               "text-[10px] uppercase tracking-widest font-black",
                               c.status.toUpperCase() === "CONNECTED"
-                                ? "text-emerald-600"
-                                : "text-red-600",
+                                ? "text-app-brand"
+                                : "text-app-secondary",
                             )}
                           >
                             {c.status}
@@ -253,7 +253,7 @@ export function ConnectorsPage() {
                       </div>
 
                       {/* Actions - matching A2 functionality */}
-                      <div className="flex items-center justify-between pt-1 border-t border-[#F3F4F6]">
+                      <div className="flex items-center justify-between pt-3 mt-2 border-t border-app-border">
                         <div className="flex items-center gap-1">
                           <ActionButton
                             icon={TestTube2}
@@ -281,7 +281,7 @@ export function ConnectorsPage() {
                         <button
                           onClick={() => handleDelete(c.id)}
                           disabled={!!busy}
-                          className="p-2 rounded-lg text-[#9CA3AF] hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
+                          className="p-2 rounded-lg text-[#9CA3AF] hover:text-app-brand hover:bg-app-bg transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -333,7 +333,7 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-[#4B5563] hover:bg-[#F9FAFB] hover:text-[#111827] transition-all disabled:opacity-50",
+        "flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold text-app-secondary hover:bg-app-bg hover:text-app-brand transition-all disabled:opacity-50",
         busy && "animate-pulse",
       )}
     >
@@ -349,18 +349,18 @@ function ActionButton({
 function Counter({
   label,
   value,
-  accent = "text-[#111827]",
+  accent = "text-app-primary",
 }: {
   label: string;
   value: number;
   accent?: string;
 }) {
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-      <p className="text-[10px] uppercase tracking-[0.2em] font-black text-[#9CA3AF]">
+        <div className="group bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl p-5 hover:shadow-md hover:border-app-border transition-all duration-300 relative overflow-hidden">
+      <p className="text-[10px] uppercase tracking-[0.2em] font-black text-[#9CA3AF] mb-2">
         {label}
       </p>
-      <p className={cn("text-2xl font-light italic mt-2 tabular-nums", accent)}>
+      <p className={cn("text-3xl font-light italic tracking-tight tabular-nums", accent)}>
         {value}
       </p>
     </div>

@@ -120,28 +120,28 @@ export function MetricsPage() {
   );
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#F9FAFB]">
+    <div className="flex-1 flex flex-col min-h-0 bg-app-bg">
       {loading && !data ? (
         <Loading message="Fetching performance metrics..." />
       ) : (
         <main className="flex-1 overflow-y-auto p-10 custom-scrollbar">
           <div className="max-w-7xl mx-auto space-y-8">
             {/* Header strip */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-200/60">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-app-border">
               <div>
                 <div className="flex items-center gap-2">
-                  <Gauge className="w-5 h-5 text-gray-700" strokeWidth={2.25} />
-                  <h1 className="text-xl font-bold tracking-tight text-[#111827]">
+                  <Gauge className="w-5 h-5 text-app-primary" strokeWidth={2.25} />
+                  <h1 className="text-xl font-bold tracking-tight text-app-primary">
                     Performance Metrics
                   </h1>
                 </div>
-                <p className="text-xs text-[#6B7280] mt-1">
+                <p className="text-xs text-app-secondary mt-1">
                   Pipelines · RAG retrieval · LLM latency · auto-refreshes every
                   15s
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex bg-white border border-gray-200 rounded-lg p-0.5 shadow-sm">
+                <div className="flex bg-app-surface border border-app-border rounded-lg p-0.5 shadow-sm">
                   {WINDOW_OPTIONS.map((opt) => (
                     <button
                       key={opt.hours}
@@ -149,8 +149,8 @@ export function MetricsPage() {
                       className={cn(
                         "px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all",
                         hours === opt.hours
-                          ? "bg-[#111827] text-white shadow-sm"
-                          : "text-gray-500 hover:text-gray-900",
+                          ? "bg-app-brand text-white shadow-md shadow-app-brand/20"
+                          : "text-app-secondary hover:text-app-primary",
                       )}
                     >
                       {opt.label}
@@ -159,7 +159,7 @@ export function MetricsPage() {
                 </div>
                 <button
                   onClick={() => load(true)}
-                  className="inline-flex items-center gap-1 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold uppercase tracking-widest rounded-lg shadow-sm"
+                  className="inline-flex items-center gap-1 px-3 py-2 bg-app-surface border border-app-border hover:bg-app-bg text-app-primary text-xs font-bold uppercase tracking-widest rounded-lg shadow-sm"
                 >
                   <RefreshCw
                     className={cn("w-3.5 h-3.5", loading && "animate-spin")}
@@ -170,34 +170,34 @@ export function MetricsPage() {
             </div>
 
             {error && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs px-3 py-2 rounded-lg flex items-start gap-2">
+              <div className="bg-app-bg border-app-border border border-rose-200 text-rose-700 text-xs px-3 py-2 rounded-lg flex items-start gap-2">
                 <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {/* Analytics Dashboard */}
-            <div className="space-y-6 mb-8 border-b border-gray-200/60 pb-8">
-              <h2 className="text-lg font-bold text-[#111827]">Analytics Dashboard</h2>
+            <div className="space-y-6 mb-8 border-b border-app-border pb-8">
+              <h2 className="text-lg font-bold text-app-primary">Analytics Dashboard</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                   label="Total Tickets"
                   value={summaryData?.total_tickets ?? "—"}
                   icon={Activity}
-                  accent="violet"
+                  accent="pwc"
                 />
                 <StatCard
                   label="Tickets Solved"
                   value={summaryData?.tickets_solved ?? summaryData?.ai_resolved ?? "—"}
                   icon={CheckCircle2}
-                  accent="emerald"
+                  accent="pwc"
                   sub={`${summaryData?.ai_resolved ?? 0} AI · ${summaryData?.human_resolved ?? 0} human`}
                 />
                 <StatCard
                   label="AI Resolution Rate"
                   value={summaryData ? fmtPct(summaryData.ai_resolution_pct) : "—"}
                   icon={Sparkles}
-                  accent="amber"
+                  accent="pwc"
                   sub={`${summaryData?.open_incidents ?? 0} open`}
                 />
                 <StatCard
@@ -210,16 +210,16 @@ export function MetricsPage() {
                       : "—"
                   }
                   icon={Clock}
-                  accent="cyan"
+                  accent="pwc"
                 />
               </div>
 
-              <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-bold text-[#111827] mb-6">Tickets Raised vs AI Solved</h3>
+              <div className="bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:border-app-border-orange hover:shadow-[0_4px_20px_rgba(255,90,20,0.05)] transition-all duration-300 relative overflow-hidden">
+                <h3 className="text-sm font-bold text-app-primary mb-6">Tickets Raised vs AI Solved</h3>
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={healthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333333" />
                       <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} dy={10} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} />
                       <Tooltip
@@ -227,8 +227,8 @@ export function MetricsPage() {
                         cursor={{ fill: "#F9FAFB" }}
                       />
                       <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
-                      <Bar dataKey="tickets_raised" name="Tickets Raised" fill="#94A3B8" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                      <Bar dataKey="tickets_ai_solved" name="AI Solved" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      <Bar dataKey="tickets_raised" name="Tickets Raised" fill="#8A8D8F" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      <Bar dataKey="tickets_ai_solved" name="AI Solved" fill="#FF5A14" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -236,53 +236,53 @@ export function MetricsPage() {
 
               {/* MTTR + AI-resolution trend */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
-                  <h3 className="text-sm font-bold text-[#111827] mb-1 flex items-center gap-1.5">
+                <div className="bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:border-app-border-orange hover:shadow-[0_4px_20px_rgba(255,90,20,0.05)] transition-all duration-300 relative overflow-hidden">
+                  <h3 className="text-sm font-bold text-app-primary mb-1 flex items-center gap-1.5">
                     MTTR Trend
                     <InfoHint
                       align="left"
                       text="Mean time to resolution per day, in minutes, averaged over incidents resolved that day. Lower is better."
                     />
                   </h3>
-                  <p className="text-[11px] text-[#6B7280] mb-5">
+                  <p className="text-[11px] text-app-secondary mb-5">
                     Mean time to resolution (minutes / day)
                   </p>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={healthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333333" />
                         <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} dy={10} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} />
                         <Tooltip
                           contentStyle={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
                         />
-                        <Line type="monotone" dataKey="mttr_minutes" name="MTTR (min)" stroke="#06B6D4" strokeWidth={2.5} dot={{ r: 3 }} />
+                        <Line type="monotone" dataKey="mttr_minutes" name="MTTR (min)" stroke="#FF5A14" strokeWidth={2.5} dot={{ r: 3 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
-                  <h3 className="text-sm font-bold text-[#111827] mb-1 flex items-center gap-1.5">
+                <div className="bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:border-app-border-orange hover:shadow-[0_4px_20px_rgba(255,90,20,0.05)] transition-all duration-300 relative overflow-hidden">
+                  <h3 className="text-sm font-bold text-app-primary mb-1 flex items-center gap-1.5">
                     AI Resolution Trend
                     <InfoHint
                       align="left"
                       text="Percentage of tickets each day that the agent resolved autonomously (AI solved ÷ raised)."
                     />
                   </h3>
-                  <p className="text-[11px] text-[#6B7280] mb-5">
+                  <p className="text-[11px] text-app-secondary mb-5">
                     Daily AI auto-resolution rate (%)
                   </p>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={healthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333333" />
                         <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} dy={10} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} domain={[0, 100]} />
                         <Tooltip
                           contentStyle={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
                         />
-                        <Line type="monotone" dataKey="success_rate" name="AI resolved %" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
+                        <Line type="monotone" dataKey="success_rate" name="AI resolved %" stroke="#FF5A14" strokeWidth={2.5} dot={{ r: 3 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -290,9 +290,9 @@ export function MetricsPage() {
               </div>
 
               {/* Knowledge Base / learning loop */}
-              <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-bold text-[#111827] mb-5 flex items-center gap-1.5">
-                  <Boxes className="w-4 h-4 text-violet-500" />
+              <div className="bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:border-app-border-orange hover:shadow-[0_4px_20px_rgba(255,90,20,0.05)] transition-all duration-300 relative overflow-hidden">
+                <h3 className="text-sm font-bold text-app-primary mb-5 flex items-center gap-1.5">
+                  <Boxes className="w-4 h-4 text-app-brand" />
                   Knowledge Base &amp; Learning Loop
                   <InfoHint
                     align="left"
@@ -310,25 +310,25 @@ export function MetricsPage() {
                     label="Error patterns"
                     value={summaryData?.kb?.patterns_total ?? 0}
                     icon={Database}
-                    tone="text-violet-600"
+                    tone="text-app-brand"
                   />
                   <KbStat
                     label="Known errors"
                     value={summaryData?.kb?.patterns_known ?? 0}
                     icon={CheckCircle2}
-                    tone="text-emerald-600"
+                    tone="text-app-brand"
                   />
                   <KbStat
                     label="Auto-fixable"
                     value={summaryData?.kb?.patterns_auto_fixable ?? 0}
                     icon={Sparkles}
-                    tone="text-amber-600"
+                    tone="text-app-brand"
                   />
                   <KbStat
                     label="PRs ingested"
                     value={summaryData?.kb?.human_prs_ingested ?? 0}
                     icon={GitPullRequest}
-                    tone="text-sky-600"
+                    tone="text-app-brand"
                   />
                 </div>
               </div>
@@ -343,14 +343,14 @@ export function MetricsPage() {
                 label="Pipeline Success"
                 value={pipelines ? fmtPct(pipelines.success_rate_pct) : "—"}
                 icon={TrendingUp}
-                accent="emerald"
+                accent="pwc"
                 sub={`${pipelines?.runs_total ?? 0} runs · ${pipelines?.runs_failed ?? 0} failed`}
               />
               <StatCard
                 label="LLM p95 Latency"
                 value={llm ? fmtMs(llm.p95_latency_ms) : "—"}
                 icon={Zap}
-                accent="violet"
+                accent="pwc"
                 sub={`${llm?.call_count ?? 0} calls · ${llm ? fmtPct(llm.success_rate * 100) : "—"} ok`}
               />
               <StatCard
@@ -359,7 +359,7 @@ export function MetricsPage() {
                   ragSummary ? fmtMs(ragSummary.incidents.p95_latency_ms) : "—"
                 }
                 icon={Activity}
-                accent="cyan"
+                accent="pwc"
                 sub={`${ragSummary?.incidents.query_count ?? 0} queries`}
               />
               <StatCard
@@ -368,7 +368,7 @@ export function MetricsPage() {
                   collections ? collections.incidents + collections.runbooks : 0
                 }
                 icon={Database}
-                accent="amber"
+                accent="pwc"
                 sub={`${collections?.incidents ?? 0} incidents · ${collections?.runbooks ?? 0} runbook chunks`}
               />
             </div>
@@ -376,10 +376,10 @@ export function MetricsPage() {
             {/* Detail panels */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* RAG panel */}
-              <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-sky-500" />
-                  <h3 className="text-sm font-bold text-[#111827]">
+              <div className="bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:border-app-border-orange transition-all duration-300 overflow-hidden">
+                <div className="px-6 py-4 border-b border-app-border flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-app-brand" />
+                  <h3 className="text-sm font-bold text-app-primary">
                     Vector retrieval (RAG)
                   </h3>
                 </div>
@@ -389,10 +389,10 @@ export function MetricsPage() {
                     return (
                       <div
                         key={kind}
-                        className="border border-gray-100 rounded-lg p-4 bg-gray-50/50"
+                        className="border border-app-border rounded-lg p-4 bg-app-bg"
                       >
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-app-secondary">
                             {kind} collection
                           </span>
                           <span className="text-[10px] font-mono text-gray-400">
@@ -431,10 +431,10 @@ export function MetricsPage() {
               </div>
 
               {/* LLM panel */}
-              <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-violet-500" />
-                  <h3 className="text-sm font-bold text-[#111827]">
+              <div className="bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:border-app-border-orange transition-all duration-300 overflow-hidden">
+                <div className="px-6 py-4 border-b border-app-border flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-app-brand" />
+                  <h3 className="text-sm font-bold text-app-primary">
                     LLM calls
                   </h3>
                 </div>
@@ -458,7 +458,7 @@ export function MetricsPage() {
                       value={`${llm?.avg_prompt_chars ?? 0} chars`}
                     />
                   </div>
-                  <p className="text-[10px] text-gray-400 leading-relaxed pt-2 border-t border-gray-100">
+                  <p className="text-[10px] text-gray-400 leading-relaxed pt-2 border-t border-app-border">
                     Latency reflects the full LLM round-trip (prompt assembly +
                     RAG context block + response parsing). Samples capped at the
                     last 500 calls.
@@ -468,10 +468,10 @@ export function MetricsPage() {
             </div>
 
             {/* Pipeline performance table */}
-            <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-emerald-500" />
-                <h3 className="text-sm font-bold text-[#111827]">
+            <div className="bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:border-app-border-orange transition-all duration-300 overflow-hidden">
+              <div className="px-6 py-4 border-b border-app-border flex items-center gap-2">
+                <Activity className="w-4 h-4 text-app-brand" />
+                <h3 className="text-sm font-bold text-app-primary">
                   Per-pipeline performance
                 </h3>
                 <span className="ml-auto text-[10px] text-gray-400 font-mono">
@@ -484,13 +484,13 @@ export function MetricsPage() {
                   <Loader2 className="w-6 h-6 text-gray-400 animate-spin mx-auto" />
                 </div>
               ) : sortedRows.length === 0 ? (
-                <div className="p-16 text-center text-xs text-gray-500">
+                <div className="p-16 text-center text-xs text-app-secondary">
                   No pipeline data for this window.
                 </div>
               ) : (
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
+                    <tr className="bg-app-bg border-b border-app-border text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">
                       <th className="px-6 py-3">Pipeline</th>
                       <th className="px-3 py-3 text-right">Runs</th>
                       <th className="px-3 py-3 text-right">Success</th>
@@ -506,18 +506,18 @@ export function MetricsPage() {
                     {sortedRows.map((r) => (
                       <tr
                         key={r.pipeline_id}
-                        className="hover:bg-[#F9FAFB] transition-colors"
+                        className="hover:bg-app-bg transition-colors"
                       >
-                        <td className="px-6 py-3 text-xs font-medium text-[#111827] max-w-xs truncate">
+                        <td className="px-6 py-3 text-xs font-medium text-app-primary max-w-xs truncate">
                           {r.pipeline_name}
                         </td>
-                        <td className="px-3 py-3 text-right text-xs font-mono text-gray-700">
+                        <td className="px-3 py-3 text-right text-xs font-mono text-app-primary">
                           {r.runs}
                         </td>
-                        <td className="px-3 py-3 text-right text-xs font-mono text-emerald-600">
+                        <td className="px-3 py-3 text-right text-xs font-mono text-app-brand">
                           {r.succeeded}
                         </td>
-                        <td className="px-3 py-3 text-right text-xs font-mono text-rose-600">
+                        <td className="px-3 py-3 text-right text-xs font-mono text-app-secondary">
                           {r.failed}
                         </td>
                         <td className="px-3 py-3 text-right text-xs font-mono">
@@ -525,25 +525,25 @@ export function MetricsPage() {
                             className={cn(
                               "inline-block px-2 py-0.5 rounded text-[10px] font-bold",
                               r.success_rate_pct >= 95
-                                ? "bg-emerald-50 text-emerald-700"
+                                ? "bg-app-surface border border-app-brand text-app-brand"
                                 : r.success_rate_pct >= 80
-                                  ? "bg-amber-50 text-amber-700"
-                                  : "bg-rose-50 text-rose-700",
+                                  ? "bg-app-surface border border-app-btn text-app-primary"
+                                  : "bg-app-surface border border-app-border text-app-secondary",
                             )}
                           >
                             {fmtPct(r.success_rate_pct)}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-right text-xs font-mono text-gray-700">
+                        <td className="px-3 py-3 text-right text-xs font-mono text-app-primary">
                           {fmtSec(r.avg_duration_sec)}
                         </td>
-                        <td className="px-3 py-3 text-right text-xs font-mono text-gray-700">
+                        <td className="px-3 py-3 text-right text-xs font-mono text-app-primary">
                           {fmtSec(r.p50_duration_sec)}
                         </td>
-                        <td className="px-3 py-3 text-right text-xs font-mono text-gray-700">
+                        <td className="px-3 py-3 text-right text-xs font-mono text-app-primary">
                           {fmtSec(r.p95_duration_sec)}
                         </td>
-                        <td className="px-3 py-3 text-right text-xs font-mono text-gray-700">
+                        <td className="px-3 py-3 text-right text-xs font-mono text-app-primary">
                           {fmtSec(r.p99_duration_sec)}
                         </td>
                       </tr>
@@ -665,9 +665,9 @@ function KbSchedulePanel() {
   const last = settings?.last_run_summary;
 
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm p-6">
-      <h3 className="text-sm font-bold text-[#111827] mb-1 flex items-center gap-1.5">
-        <CalendarClock className="w-4 h-4 text-indigo-500" />
+    <div className="bg-gradient-to-br from-app-surface to-app-bg border border-app-border rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:border-app-border-orange hover:shadow-[0_4px_20px_rgba(255,90,20,0.05)] transition-all duration-300 relative overflow-hidden">
+      <h3 className="text-sm font-bold text-app-primary mb-1 flex items-center gap-1.5">
+        <CalendarClock className="w-4 h-4 text-app-brand" />
         Knowledge Base Refresh Schedule
         <InfoHint
           align="left"
@@ -680,7 +680,7 @@ function KbSchedulePanel() {
           ]}
         />
       </h3>
-      <p className="text-[11px] text-[#6B7280] mb-5">
+      <p className="text-[11px] text-app-secondary mb-5">
         Re-enriches from old errors, history, uploaded runbooks and
         human-approved fixes — time stored in SQL (UTC).
       </p>
@@ -688,12 +688,12 @@ function KbSchedulePanel() {
       <div className="flex flex-wrap items-end gap-5">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
-            type="checkbox"
+            type="checkbox" 
+            className="accent-app-brand text-app-brand focus:ring-app-brand w-4 h-4 cursor-pointer bg-app-surface border-app-border rounded accent-indigo-600"
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
-            className="w-4 h-4 accent-indigo-600"
           />
-          <span className="text-xs font-bold text-[#374151]">
+          <span className="text-xs font-bold text-app-primary">
             Daily refresh enabled
           </span>
         </label>
@@ -706,14 +706,14 @@ function KbSchedulePanel() {
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="px-3 py-2 text-sm bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+            className="px-3 py-2 text-sm bg-app-bg border border-app-border rounded-lg focus:outline-none focus:border-app-brand"
           />
         </div>
 
         <button
           onClick={save}
           disabled={saving}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#111827] rounded-lg hover:bg-black disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-app-brand rounded-lg hover:bg-[#E04B0E] hover:shadow-[0_4px_20px_rgba(255,90,20,0.2)] transition-all disabled:opacity-50"
         >
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
           Save schedule
@@ -722,18 +722,18 @@ function KbSchedulePanel() {
         <button
           onClick={runNow}
           disabled={running}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-app-primary bg-app-surface border border-app-border rounded-lg hover:bg-app-bg disabled:opacity-50"
         >
           {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
           Run now
         </button>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-        <div className="text-[11px] text-gray-500 flex flex-wrap gap-x-6 gap-y-1">
+      <div className="mt-4 pt-4 border-t border-app-border flex items-center justify-between">
+        <div className="text-[11px] text-app-secondary flex flex-wrap gap-x-6 gap-y-1">
           <span>
             Last run:{" "}
-            <span className="font-semibold text-gray-700">
+            <span className="font-semibold text-app-primary">
               {settings?.last_run_at
                 ? new Date(
                     settings.last_run_at.endsWith("Z")
@@ -747,19 +747,19 @@ function KbSchedulePanel() {
             <>
               <span>
                 Incidents replayed:{" "}
-                <span className="font-semibold text-gray-700">
+                <span className="font-semibold text-app-primary">
                   {last.incidents_replayed ?? 0}
                 </span>
               </span>
               <span>
                 Patterns mirrored:{" "}
-                <span className="font-semibold text-gray-700">
+                <span className="font-semibold text-app-primary">
                   {last.patterns_mirrored ?? 0}
                 </span>
               </span>
               <span>
                 Runbooks:{" "}
-                <span className="font-semibold text-gray-700">
+                <span className="font-semibold text-app-primary">
                   {last.runbooks_seen ?? 0}
                 </span>
               </span>
@@ -769,7 +769,7 @@ function KbSchedulePanel() {
         
         <button
           onClick={() => setShowLogs(!showLogs)}
-          className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg"
+          className="flex items-center gap-1.5 text-xs font-medium text-app-secondary hover:text-app-brand transition-colors bg-app-bg hover:bg-app-surface border border-app-border px-3 py-1.5 rounded-lg"
         >
           <FileText className="w-3.5 h-3.5" />
           {showLogs ? "Hide logs" : "View logs"}
@@ -777,48 +777,48 @@ function KbSchedulePanel() {
       </div>
 
       {showLogs && (
-        <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden bg-white">
-          <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 text-xs font-bold text-gray-700 flex items-center gap-2">
-            <Database className="w-3.5 h-3.5 text-gray-500" />
+        <div className="mt-4 border border-app-border rounded-lg overflow-hidden bg-app-surface">
+          <div className="bg-gradient-to-br from-app-surface to-app-bg px-4 py-3 border-b border-app-border text-xs font-bold text-app-primary flex items-center gap-2">
+            <Database className="w-3.5 h-3.5 text-app-secondary" />
             Refresh Logs
           </div>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-app-border/50">
             {DUMMY_LOGS.map((log) => (
               <div key={log.id} className="flex flex-col">
                 <div 
-                  className="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-app-bg transition-colors"
                   onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
                 >
                   <div className="flex-shrink-0">
                     {expandedLogId === log.id ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                      <ChevronDown className="w-3.5 h-3.5 text-app-secondary" />
                     ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                      <ChevronRight className="w-3.5 h-3.5 text-app-secondary" />
                     )}
                   </div>
-                  <span className="text-[11px] font-mono text-gray-500 whitespace-nowrap">
+                  <span className="text-[11px] font-mono text-app-secondary whitespace-nowrap">
                     {new Date(log.timestamp).toLocaleString()}
                   </span>
                   <span className={cn("text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded", 
-                    log.status === 'success' ? 'bg-emerald-100 text-emerald-700' : 
-                    log.status === 'error' ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'
+                    log.status === 'success' ? 'bg-app-surface border border-app-brand text-app-brand' : 
+                    log.status === 'error' ? 'bg-app-surface border border-app-secondary text-app-secondary' : 'bg-app-surface border border-app-btn text-app-primary'
                   )}>
                     {log.status}
                   </span>
-                  <span className="text-xs text-gray-700 font-medium">
+                  <span className="text-xs text-app-primary font-medium">
                     {log.message}
                   </span>
                 </div>
                 
                 {expandedLogId === log.id && (
-                  <div className="px-11 py-4 bg-gray-50 border-t border-gray-100">
+                  <div className="px-11 py-4 bg-app-surface border-t border-app-border">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6">
                       {Object.entries(log.details).map(([key, value]) => (
                         <div key={key} className="flex items-start gap-2">
-                          <span className="text-[11px] font-medium text-gray-500 capitalize min-w-24">
+                          <span className="text-[11px] font-medium text-app-secondary capitalize min-w-24">
                             {key.replace(/_/g, ' ')}:
                           </span>
-                          <span className="text-[11px] text-gray-900 font-mono">
+                          <span className="text-[11px] text-app-primary font-mono">
                             {Array.isArray(value) ? value.join(', ') : String(value)}
                           </span>
                         </div>
@@ -833,7 +833,7 @@ function KbSchedulePanel() {
       )}
 
       {msg && (
-        <div className="mt-3 text-[11px] text-gray-700 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+        <div className="mt-3 text-[11px] text-app-primary bg-app-surface border border-app-border rounded-lg px-3 py-2">
           {msg}
         </div>
       )}
@@ -843,11 +843,11 @@ function KbSchedulePanel() {
 
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-md px-3 py-2">
-      <div className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+    <div className="bg-app-surface border border-app-border rounded-md px-3 py-2">
+      <div className="text-[9px] font-black uppercase tracking-widest text-app-secondary">
         {label}
       </div>
-      <div className="text-sm font-bold text-[#111827] mt-0.5">{value}</div>
+      <div className="text-sm font-bold text-app-primary mt-0.5">{value}</div>
     </div>
   );
 }
@@ -864,14 +864,14 @@ function KbStat({
   tone: string;
 }) {
   return (
-    <div className="border border-gray-100 rounded-lg p-4 bg-gray-50/50">
+    <div className="border border-app-border rounded-lg p-4 bg-app-bg">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
           {label}
         </span>
         <Icon className={`w-4 h-4 ${tone}`} />
       </div>
-      <div className="text-2xl font-bold text-[#111827]">{value}</div>
+      <div className="text-2xl font-bold text-app-primary">{value}</div>
     </div>
   );
 }

@@ -110,10 +110,10 @@ export function RunInvestigation({
 
   if (!run) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#F9FAFB]">
+      <div className="flex-1 flex items-center justify-center bg-app-bg">
         <div className="text-center">
-          <AlertTriangle className="w-12 h-12 text-[#E5E7EB] mx-auto mb-4" />
-          <h3 className="text-sm font-bold text-[#111827] mb-2">
+          <AlertTriangle className="w-12 h-12 text-app-secondary mx-auto mb-4" />
+          <h3 className="text-sm font-bold text-app-primary mb-2">
             Run data not found
           </h3>
           <button onClick={onBack} className="btn-secondary">
@@ -125,14 +125,14 @@ export function RunInvestigation({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#F9FAFB]">
+    <div className="flex-1 flex flex-col min-h-0 bg-app-bg">
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Back Action */}
           <div className="flex items-center">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E5E7EB] rounded text-[10px] font-bold uppercase tracking-[0.15em] text-[#6B7280] hover:bg-gray-50 transition-all shadow-sm"
+              className="flex items-center gap-2 px-3 py-1.5 bg-app-surface border border-app-border rounded text-[10px] font-bold uppercase tracking-[0.15em] text-app-secondary hover:bg-app-bg transition-all shadow-sm"
             >
               <ArrowLeft size={12} />
               Back to Pipeline
@@ -146,13 +146,13 @@ export function RunInvestigation({
                 className={cn(
                   "px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest",
                   run.status === "FAILED"
-                    ? "bg-rose-50 text-rose-600 border border-rose-100"
-                    : "bg-emerald-50 text-emerald-600 border border-emerald-100",
+                    ? "bg-app-surface text-rose-400 border border-rose-500/30"
+                    : "bg-app-surface text-emerald-400 border border-app-brand/30",
                 )}
               >
                 {run.status}
               </span>
-              <span className="font-mono text-xs text-[#6B7280]">
+              <span className="font-mono text-xs text-app-secondary">
                 {run.started_at &&
                   format(
                     new Date(
@@ -170,7 +170,7 @@ export function RunInvestigation({
               <button
                 onClick={triggerAnalysis}
                 disabled={analyzing}
-                className="flex items-center gap-2 px-4 py-2 bg-[#111827] text-white text-[10px] font-bold uppercase tracking-[0.15em] rounded hover:bg-black transition-all shadow-sm disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-app-brand text-white text-[10px] font-bold uppercase tracking-[0.15em] rounded hover:bg-[#E04B0E] transition-all shadow-md disabled:opacity-50"
               >
                 {analyzing ? (
                   <RotateCw size={14} className="animate-spin" />
@@ -184,17 +184,17 @@ export function RunInvestigation({
 
           {/* Error Message */}
           {run.error_message && (
-            <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 shadow-sm">
+            <div className="bg-app-input border border-rose-500/30 rounded-xl p-4 shadow-inner">
               <div className="flex items-start gap-3">
                 <AlertTriangle
                   size={16}
-                  className="text-rose-600 mt-0.5 shrink-0"
+                  className="text-rose-400 mt-0.5 shrink-0"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">
                     Error Message
                   </div>
-                  <div className="text-sm font-mono text-[#111827] wrap-break-word">
+                  <div className="text-sm font-mono text-app-primary wrap-break-word">
                     {run.error_message}
                   </div>
                 </div>
@@ -207,17 +207,17 @@ export function RunInvestigation({
             <AnalysisPanel analysis={analysis} />
           ) : (
             analysisMessage && (
-              <div className="bg-white border border-blue-100 rounded-xl p-6 shadow-sm relative overflow-hidden">
-                <div className="absolute -top-12 -right-12 w-40 h-40 bg-blue-50/50 blur-3xl rounded-full pointer-events-none" />
+              <div className="bg-app-surface border border-app-border rounded-xl p-6 shadow-sm relative overflow-hidden">
+                <div className="absolute -top-12 -right-12 w-40 h-40 bg-app-surface border border-app-border blur-3xl rounded-full pointer-events-none" />
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-md bg-blue-50 border border-blue-100">
-                    <Sparkles size={18} className="text-blue-600" />
+                  <div className="p-2 rounded-md bg-app-surface border border-sky-500/30 text-sky-400">
+                    <Sparkles size={18} className="text-app-brand" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-[#111827]">
+                    <div className="text-sm font-bold text-app-primary">
                       {analysisMessage}
                     </div>
-                    <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">
+                    <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">
                       AI diagnosis has not been triggered for this run
                     </div>
                   </div>
@@ -225,7 +225,7 @@ export function RunInvestigation({
                 <button
                   onClick={triggerAnalysis}
                   disabled={analyzing}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-blue-700 transition-all shadow-sm disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-app-btn text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-app-hover transition-all shadow-sm disabled:opacity-50"
                 >
                   {analyzing ? (
                     <RotateCw size={14} className="animate-spin" />
@@ -239,13 +239,13 @@ export function RunInvestigation({
           )}
 
           {/* Logs Viewer */}
-          <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-[#F3F4F6] flex items-center justify-between flex-wrap gap-3">
+          <div className="bg-app-surface border border-app-border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-app-border flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
-                <Terminal size={16} className="text-blue-600" />
-                <h3 className="text-sm font-bold text-[#111827]">
+                <Terminal size={16} className="text-app-brand" />
+                <h3 className="text-sm font-bold text-app-primary">
                   Logs{" "}
-                  <span className="text-xs font-mono text-[#9CA3AF]">
+                  <span className="text-xs font-mono text-app-secondary">
                     ({filteredLogs.length})
                   </span>
                 </h3>
@@ -258,8 +258,8 @@ export function RunInvestigation({
                     className={cn(
                       "px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest border transition-all",
                       logFilter === lvl
-                        ? "border-blue-600 text-blue-600 bg-blue-50"
-                        : "border-[#E5E7EB] text-[#6B7280] hover:border-[#9CA3AF]",
+                        ? "border-app-brand text-app-brand bg-app-surface border border-app-border"
+                        : "border-app-border text-app-secondary hover:border-[#9CA3AF]",
                     )}
                   >
                     {lvl}
@@ -267,9 +267,9 @@ export function RunInvestigation({
                 ))}
               </div>
             </div>
-            <div className="bg-[#111827] p-5 font-mono text-[11px] max-h-[600px] overflow-auto custom-scrollbar">
+            <div className="bg-app-input p-5 font-mono text-[11px] max-h-[600px] overflow-auto custom-scrollbar">
               {filteredLogs.length === 0 ? (
-                <div className="text-[#4B5563] italic text-sm py-4 text-center">
+                <div className="text-app-secondary italic text-sm py-4 text-center">
                   No logs available for this run.
                 </div>
               ) : (
@@ -277,9 +277,9 @@ export function RunInvestigation({
                   {filteredLogs.map((l, i) => (
                     <div
                       key={i}
-                      className="flex gap-3 hover:bg-white/5 px-2 py-0.5 rounded transition-colors group"
+                      className="flex gap-3 hover:bg-app-surface/5 px-2 py-0.5 rounded transition-colors group"
                     >
-                      <span className="text-[#4B5563] shrink-0 select-none">
+                      <span className="text-app-secondary shrink-0 select-none">
                         {format(new Date(l.timestamp), "dd/MM/yyyy HH:mm:ss")}
                       </span>
                       <span
@@ -444,23 +444,23 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
       {/* Overview Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[#F9FAFB] border border-[#F3F4F6] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
-            <Database size={12} className="text-blue-500" /> Source
+        <div className="bg-app-bg border border-app-border rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+            <Database size={12} className="text-app-brand" /> Source
           </div>
-          <div className="text-sm font-bold text-[#111827]">
+          <div className="text-sm font-bold text-app-primary">
             {renderValue(source)}
           </div>
-          <div className="text-[10px] font-medium text-[#6B7280] mt-1 truncate">
+          <div className="text-[10px] font-medium text-app-secondary mt-1 truncate">
             {renderValue(pipeline)}
           </div>
         </div>
 
-        <div className="bg-[#F9FAFB] border border-[#F3F4F6] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+        <div className="bg-app-bg border border-app-border rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
             <Activity size={12} className="text-amber-500" /> Task
           </div>
-          <div className="text-sm font-bold text-[#111827] truncate">
+          <div className="text-sm font-bold text-app-primary truncate">
             {renderValue(task)}
           </div>
           <div className="text-[10px] font-medium text-rose-600 mt-1 uppercase tracking-tighter">
@@ -468,27 +468,27 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
           </div>
         </div>
 
-        <div className="bg-[#F9FAFB] border border-[#F3F4F6] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+        <div className="bg-app-bg border border-app-border rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
             <User size={12} className="text-emerald-500" /> Creator
           </div>
-          <div className="text-sm font-bold text-[#111827] truncate">
+          <div className="text-sm font-bold text-app-primary truncate">
             {renderValue(creator).split("@")[0]}
           </div>
-          <div className="text-[10px] font-medium text-[#6B7280] mt-1 truncate">
+          <div className="text-[10px] font-medium text-app-secondary mt-1 truncate">
             {renderValue(creator)}
           </div>
         </div>
 
-        <div className="bg-[#F9FAFB] border border-[#F3F4F6] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+        <div className="bg-app-bg border border-app-border rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
             <Info size={12} className="text-purple-500" /> Severity
           </div>
           <div
             className={cn(
               "inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border",
               severity === "high"
-                ? "bg-rose-50 text-rose-600 border-rose-100"
+                ? "bg-app-surface text-rose-400 border-rose-500/30"
                 : "bg-amber-50 text-amber-600 border-amber-100",
             )}
           >
@@ -500,36 +500,36 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
       {/* Error Details Section */}
       <div className="bg-rose-50/30 border border-rose-100 rounded-2xl overflow-hidden shadow-sm">
         <div className="px-5 py-3 border-b border-rose-100 bg-rose-50/50 flex items-center gap-2">
-          <AlertTriangle size={14} className="text-rose-600" />
+          <AlertTriangle size={14} className="text-rose-400" />
           <span className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">
             Deep Error Analysis
           </span>
         </div>
         <div className="p-6 space-y-4">
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Incident Summary
             </div>
-            <div className="text-sm font-mono text-[#111827] bg-white border border-rose-100 p-4 rounded-xl shadow-inner leading-relaxed">
+            <div className="text-sm font-mono text-app-primary bg-app-surface border border-rose-100 p-4 rounded-xl shadow-inner leading-relaxed">
               {renderValue(summary, "No top-level error message provided.")}
             </div>
           </div>
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Contextual Findings
             </div>
             {typeof detailedError === "object" && detailedError !== null ? (
               <div className="space-y-3">
-                <div className="text-sm text-[#4B5563] leading-relaxed italic">
+                <div className="text-sm text-app-secondary leading-relaxed italic">
                   {renderValue(
                     detailedError.message ||
-                      detailedError.error ||
-                      "No detailed message provided.",
+                    detailedError.error ||
+                    "No detailed message provided.",
                   )}
                 </div>
                 {detailedError.logs && (
-                  <div className="bg-[#111827] text-gray-400 p-3 rounded-lg font-mono text-[10px] overflow-x-auto border border-[#1F2937] shadow-inner">
-                    <div className="text-[8px] font-bold text-[#4B5563] uppercase tracking-widest mb-2 border-b border-[#1F2937] pb-1">
+                  <div className="bg-app-input text-gray-400 p-3 rounded-lg font-mono text-[10px] overflow-x-auto border border-[#1F2937] shadow-inner">
+                    <div className="text-[8px] font-bold text-app-secondary uppercase tracking-widest mb-2 border-b border-[#1F2937] pb-1">
                       Technical Logs
                     </div>
                     {detailedError.logs}
@@ -537,7 +537,7 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
                 )}
               </div>
             ) : (
-              <div className="text-sm text-[#4B5563] leading-relaxed italic">
+              <div className="text-sm text-app-secondary leading-relaxed italic">
                 {renderValue(
                   detailedError,
                   "No detailed explanation available.",
@@ -547,7 +547,7 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
 
             {/* Render structured error logs if they exist at error.logs level */}
             {Array.isArray(data.error?.logs) && data.error.logs.length > 0 && (
-              <div className="mt-4 bg-[#111827] rounded-xl overflow-hidden border border-[#1F2937] shadow-lg">
+              <div className="mt-4 bg-app-input rounded-xl overflow-hidden border border-[#1F2937] shadow-lg">
                 <div className="px-4 py-2 border-b border-[#1F2937] bg-[#1F2937]/30 flex items-center gap-2">
                   <Terminal size={10} className="text-blue-400" />
                   <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">
@@ -560,7 +560,7 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
                       key={lIdx}
                       className="flex gap-3 font-mono text-[10px] group"
                     >
-                      <span className="text-[#4B5563] shrink-0">
+                      <span className="text-app-secondary shrink-0">
                         {log.timestamp?.split("T")[1] || "LOG"}
                       </span>
                       <span
@@ -568,7 +568,7 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
                           "shrink-0 font-bold",
                           log.level === "ERROR"
                             ? "text-rose-500"
-                            : "text-blue-500",
+                            : "text-app-brand",
                         )}
                       >
                         [{log.level}]
@@ -588,27 +588,27 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
       {/* Recommended Actions Section */}
       {actions.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">
-            <Wrench size={14} className="text-blue-600" /> Forensic
+          <div className="flex items-center gap-2 text-[10px] font-bold text-app-secondary uppercase tracking-widest">
+            <Wrench size={14} className="text-app-brand" /> Forensic
             Recommendations
           </div>
           <div className="grid grid-cols-1 gap-4">
             {actions.map((action: any, idx: number) => (
               <div
                 key={idx}
-                className="group bg-white border border-[#E5E7EB] rounded-2xl shadow-sm hover:border-blue-200 hover:shadow-md transition-all duration-300"
+                className="group bg-app-surface border border-app-border rounded-2xl shadow-sm hover:border-blue-200 hover:shadow-md transition-all duration-300"
               >
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-app-surface border border-app-border text-app-brand flex items-center justify-center font-bold text-sm border border-app-border/50 group-hover:bg-app-hover group-hover:text-app-primary transition-colors">
                         {idx + 1}
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-[#111827]">
+                        <h4 className="text-sm font-bold text-app-primary">
                           {renderValue(action.action, "Recommended Action")}
                         </h4>
-                        <p className="text-[11px] text-[#6B7280]">
+                        <p className="text-[11px] text-app-secondary">
                           {renderValue(action.description)}
                         </p>
                       </div>
@@ -617,10 +617,10 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
                       className={cn(
                         "px-2 py-1 rounded text-[8px] font-bold uppercase tracking-widest border transition-all",
                         action.priority === "high"
-                          ? "bg-rose-50 text-rose-600 border-rose-100 shadow-sm shadow-rose-100"
+                          ? "bg-app-surface text-rose-400 border border-rose-500/30"
                           : action.priority === "medium"
                             ? "bg-amber-50 text-amber-600 border-amber-100"
-                            : "bg-[#F9FAFB] text-[#9CA3AF] border-[#F3F4F6]",
+                            : "bg-app-bg text-app-secondary border-app-border",
                       )}
                     >
                       {renderValue(action.priority || "Action Item")}
@@ -629,20 +629,20 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
 
                   {Array.isArray(action.steps) && action.steps.length > 0 && (
                     <div className="pl-11 space-y-3">
-                      <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                      <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center gap-1.5">
                         <List size={10} /> Execution Steps
                       </div>
                       <div className="grid grid-cols-1 gap-2">
                         {action.steps.map((step: string, sIdx: number) => (
                           <div
                             key={sIdx}
-                            className="flex items-start gap-3 p-2.5 rounded-lg bg-[#F9FAFB] border border-[#F3F4F6] group-hover:bg-white group-hover:border-blue-50 transition-colors"
+                            className="flex items-start gap-3 p-2.5 rounded-lg bg-app-bg border border-app-border group-hover:bg-app-surface group-hover:border-app-border/50 transition-colors"
                           >
                             <CheckCircle2
                               size={12}
                               className="text-emerald-500 mt-0.5 shrink-0"
                             />
-                            <span className="text-xs text-[#4B5563] leading-snug">
+                            <span className="text-xs text-app-secondary leading-snug">
                               {renderValue(step)}
                             </span>
                           </div>
@@ -661,43 +661,43 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
       {(data.additional_context?.potential_causes?.length > 0 ||
         data.additional_context?.impact ||
         data.timestamp) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-[#F3F4F6]">
-          <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-3 flex items-center gap-1.5">
-              <Sparkles size={12} className="text-amber-500" /> Potential Causes
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {data.additional_context?.potential_causes?.map(
-                (cause: string, idx: number) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-medium border border-amber-100 flex items-center gap-2"
-                  >
-                    <div className="w-1 h-1 rounded-full bg-amber-400" />
-                    {renderValue(cause)}
-                  </span>
-                ),
-              )}
-              {(!data.additional_context?.potential_causes ||
-                data.additional_context.potential_causes.length === 0) && (
-                <span className="text-[10px] text-[#9CA3AF] italic">
-                  No specific causes flagged.
-                </span>
-              )}
-            </div>
-          </div>
-          {data.additional_context?.impact && (
-            <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5">
-              <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2">
-                Business Impact Assessment
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-app-border">
+            <div>
+              <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <Sparkles size={12} className="text-amber-500" /> Potential Causes
               </div>
-              <p className="text-xs text-[#4B5563] leading-relaxed italic">
-                "{renderValue(data.additional_context.impact)}"
-              </p>
+              <div className="flex flex-wrap gap-2">
+                {data.additional_context?.potential_causes?.map(
+                  (cause: string, idx: number) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-medium border border-amber-100 flex items-center gap-2"
+                    >
+                      <div className="w-1 h-1 rounded-full bg-amber-400" />
+                      {renderValue(cause)}
+                    </span>
+                  ),
+                )}
+                {(!data.additional_context?.potential_causes ||
+                  data.additional_context.potential_causes.length === 0) && (
+                    <span className="text-[10px] text-app-secondary italic">
+                      No specific causes flagged.
+                    </span>
+                  )}
+              </div>
             </div>
-          )}
-        </div>
-      )}
+            {data.additional_context?.impact && (
+              <div className="bg-app-surface border border-app-border/50 border border-app-border/50 rounded-2xl p-5">
+                <div className="text-[10px] font-bold text-app-brand uppercase tracking-widest mb-2">
+                  Business Impact Assessment
+                </div>
+                <p className="text-xs text-app-secondary leading-relaxed italic">
+                  "{renderValue(data.additional_context.impact)}"
+                </p>
+              </div>
+            )}
+          </div>
+        )}
     </div>
   );
 }
@@ -710,15 +710,15 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
   const raw = analysis.raw_response || {};
   const explain = raw.confidence_explanation as
     | {
-        level?: string;
-        headline?: string;
-        factors?: {
-          label: string;
-          detail: string;
-          contribution: number;
-          polarity: "positive" | "negative" | "neutral";
-        }[];
-      }
+      level?: string;
+      headline?: string;
+      factors?: {
+        label: string;
+        detail: string;
+        contribution: number;
+        polarity: "positive" | "negative" | "neutral";
+      }[];
+    }
     | undefined;
 
   const rcDetails: string[] = Array.isArray(raw.root_cause_details)
@@ -740,24 +740,24 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
   const recommendedActions = raw.recommended_actions || [];
 
   return (
-    <div className="bg-white border border-blue-100 rounded-xl shadow-sm relative overflow-hidden">
-      <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-50/30 blur-3xl rounded-full pointer-events-none" />
+    <div className="bg-app-surface border border-app-border/50 rounded-xl shadow-sm relative overflow-hidden">
+      <div className="absolute -top-20 -right-20 w-64 h-64 bg-app-surface border border-app-border/30 blur-3xl rounded-full pointer-events-none" />
 
-      <div className="px-5 py-4 border-b border-blue-50 bg-blue-50/10 flex items-center justify-between flex-wrap gap-2">
+      <div className="px-5 py-4 border-b border-app-border/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-md bg-white border border-blue-100 shadow-sm">
-            <Sparkles size={18} className="text-blue-600" />
+          <div className="p-2 rounded-md bg-app-input border border-sky-500/30 shadow-inner">
+            <Sparkles size={18} className="text-app-brand" />
           </div>
           <div>
             <div className="text-sm font-bold flex items-center gap-2">
               Agentic Ops Diagnosis
               {/* {analysis.model && (
-                <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-widest">
+                <span className="text-[9px] font-bold text-app-brand bg-app-surface border border-app-border px-1.5 py-0.5 rounded border border-app-border/50 uppercase tracking-widest">
                   {analysis.model}
                 </span>
               )} */}
             </div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mt-0.5">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mt-0.5">
               Generated{" "}
               {formatDistanceToNow(
                 new Date(
@@ -773,10 +773,10 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">
+          <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">
             Confidence
           </span>
-          <div className="w-24 h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+          <div className="w-24 h-1.5 bg-app-surface rounded-full overflow-hidden">
             <div
               className={cn(
                 "h-full transition-all duration-500",
@@ -793,10 +793,10 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             className={cn(
               "text-xs font-bold font-mono",
               confidence >= 0.7
-                ? "text-emerald-600"
+                ? "text-emerald-400"
                 : confidence >= 0.4
-                  ? "text-amber-600"
-                  : "text-rose-600",
+                  ? "text-amber-400"
+                  : "text-rose-400",
             )}
           >
             {Math.round(confidence * 100)}%
@@ -804,7 +804,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           {explain && (
             <button
               onClick={() => setShowWhy((v) => !v)}
-              className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors"
+              className="text-[10px] font-bold text-app-brand uppercase tracking-widest hover:text-blue-700 transition-colors"
             >
               {showWhy ? "Hide" : "Why?"}
             </button>
@@ -822,14 +822,14 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                   className={cn(
                     "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded",
                     classification.is_known
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-amber-50 text-amber-700",
+                      ? "bg-app-input text-emerald-400 border border-emerald-500/30"
+                      : "bg-app-input text-amber-400 border border-amber-500/30",
                   )}
                 >
                   {classification.is_known ? "Known error" : "New error type"}
                 </span>
                 {classification.error_type && (
-                  <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-700">
+                  <span className="text-[10px] font-bold px-2 py-1 rounded bg-app-input text-app-secondary border border-app-border/50">
                     {classification.error_type}
                   </span>
                 )}
@@ -837,12 +837,12 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             )}
 
             {explain && showWhy && (
-              <div className="bg-blue-50/40 border border-blue-100 rounded-xl p-4 space-y-3">
-                <div className="text-[10px] font-bold text-blue-700 uppercase tracking-widest">
+              <div className="bg-app-input border border-app-border/50 rounded-xl p-4 space-y-3 shadow-inner">
+                <div className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">
                   Why confidence is {explain.level}
                 </div>
                 {explain.headline && (
-                  <p className="text-xs text-[#374151] leading-relaxed">
+                  <p className="text-xs text-app-primary leading-relaxed">
                     {explain.headline}
                   </p>
                 )}
@@ -861,7 +861,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-[#111827]">
+                          <span className="text-xs font-bold text-app-primary">
                             {f.label}
                           </span>
                           {f.contribution > 0 && (
@@ -870,11 +870,11 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-[#6B7280] leading-relaxed mt-0.5">
+                        <p className="text-[11px] text-app-secondary leading-relaxed mt-0.5">
                           {f.detail}
                         </p>
                         {f.contribution > 0 && (
-                          <div className="h-1 bg-gray-100 rounded-full overflow-hidden mt-1.5">
+                          <div className="h-1 bg-app-border rounded-full overflow-hidden mt-1.5">
                             <div
                               className={cn(
                                 "h-full rounded-full",
@@ -898,21 +898,21 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         )}
 
         <div>
-          <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
-            Incident Summary
+          <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+            Summary
           </div>
-          <div className="text-sm text-[#111827] leading-relaxed font-medium">
+          <div className="text-sm text-app-primary leading-relaxed font-medium">
             {analysis.summary}
           </div>
         </div>
-        
+
         {errorDetails && (
           <div>
             <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
               Error Details
             </div>
             <div className="text-sm text-[#4B5563] leading-relaxed">
-              {errorDetails.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+              {errorDetails.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
                 i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
               )}
             </div>
@@ -931,11 +931,11 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           return (
             analysis.root_cause && (
               <div>
-                <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+                <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
                   Root Cause
                 </div>
                 <div className="text-sm text-[#4B5563] whitespace-pre-wrap bg-[#F9FAFB] p-4 rounded-lg border border-[#F3F4F6] leading-relaxed">
-                  {analysis.root_cause.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+                  {analysis.root_cause.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
                     i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
                   )}
                 </div>
@@ -946,12 +946,12 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
 
         {rcDetails.length > 0 && (
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Pinpointed Evidence
             </div>
             <ul className="space-y-1.5">
               {rcDetails.map((d, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
+                <li key={i} className="flex items-start gap-2 text-sm text-app-secondary">
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
                   <span className="leading-relaxed">{d}</span>
                 </li>
@@ -970,7 +970,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                 <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                   <span className="leading-relaxed">
-                    {d.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) => 
+                    {d.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) =>
                       idx % 2 === 1 ? <strong key={idx} className="font-bold text-gray-900">{part}</strong> : part
                     )}
                   </span>
@@ -986,7 +986,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
               Failure Mechanism
             </div>
             <div className="text-sm text-[#4B5563] whitespace-pre-wrap bg-rose-50 p-4 rounded-lg border border-rose-100 leading-relaxed">
-              {failureMechanism.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+              {failureMechanism.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
                 i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
               )}
             </div>
@@ -999,7 +999,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
               Impact
             </div>
             <div className="text-sm text-[#4B5563] leading-relaxed">
-              {impact.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+              {impact.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
                 i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
               )}
             </div>
@@ -1012,7 +1012,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
               Immediate Fix
             </div>
             <div className="text-sm text-[#374151] whitespace-pre-wrap leading-relaxed italic border-l-4 border-emerald-500 pl-4 py-2">
-              {analysis.suggested_fix.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+              {analysis.suggested_fix.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
                 i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900 not-italic">{part}</strong> : part
               )}
             </div>
@@ -1025,7 +1025,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
               Long-Term Prevention
             </div>
             <div className="text-sm text-[#4B5563] leading-relaxed">
-              {longTermPrevention.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) => 
+              {longTermPrevention.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
                 i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
               )}
             </div>
@@ -1042,7 +1042,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                 <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
                   <span className="mt-0.5 text-blue-500 shrink-0">→</span>
                   <span className="leading-relaxed">
-                    {v.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) => 
+                    {v.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) =>
                       idx % 2 === 1 ? <strong key={idx} className="font-bold text-gray-900">{part}</strong> : part
                     )}
                   </span>
@@ -1054,7 +1054,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
 
         {validation.length > 0 && (
           <div>
-            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-2">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Validation Steps
             </div>
             <ul className="space-y-1.5">
@@ -1062,7 +1062,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                 <li key={i} className="flex items-start gap-2 text-sm text-[#4B5563]">
                   <span className="mt-0.5 text-emerald-500 shrink-0">✓</span>
                   <span className="leading-relaxed">
-                    {v.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) => 
+                    {v.split(/\*\*(.*?)\*\*/g).map((part: string, idx: number) =>
                       idx % 2 === 1 ? <strong key={idx} className="font-bold text-gray-900">{part}</strong> : part
                     )}
                   </span>
@@ -1076,7 +1076,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           <div>
             <button
               onClick={() => setShowPatch((v) => !v)}
-              className="flex items-center gap-2 text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-all mb-2"
+              className="flex items-center gap-2 text-[10px] font-bold text-app-brand uppercase tracking-widest hover:text-blue-700 transition-all mb-2"
             >
               {showPatch ? (
                 <ChevronDown size={14} />
@@ -1086,7 +1086,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
               Proposed Code Patch
             </button>
             {showPatch && (
-              <pre className="bg-[#111827] border border-[#374151] rounded-lg p-4 text-[11px] font-mono text-gray-300 overflow-auto max-h-80 whitespace-pre custom-scrollbar shadow-inner">
+              <pre className="bg-app-input border border-app-border/50 rounded-lg p-4 text-[11px] font-mono text-gray-300 overflow-auto max-h-80 whitespace-pre custom-scrollbar shadow-inner">
                 {analysis.fix_patch}
               </pre>
             )}
@@ -1094,10 +1094,10 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         )}
 
         {analysis.fix_patch && (
-          <div className="pt-6 border-t border-[#F3F4F6] flex items-center justify-between flex-wrap gap-4">
-            <div className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-widest">
+          <div className="pt-6 border-t border-app-border flex items-center justify-between flex-wrap gap-4">
+            <div className="text-[11px] font-bold text-app-secondary uppercase tracking-widest">
               {analysis.auto_fix_applied ? (
-                <span className="text-emerald-600">
+                <span className="text-emerald-400">
                   ✓ Fix submitted: {analysis.auto_fix_result}
                 </span>
               ) : (

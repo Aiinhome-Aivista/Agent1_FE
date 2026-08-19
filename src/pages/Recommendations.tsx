@@ -58,7 +58,7 @@ export function RecommendationsPage() {
               value={accepted.length}
               accent="text-emerald-700 bg-emerald-50"
             />
-            <Stat label="Dismissed" value={dismissed.length} accent="text-[#6B7280] bg-gray-50" />
+            <Stat label="Dismissed" value={dismissed.length} accent="text-app-secondary bg-app-surface" />
           </div>
 
           <Section title="Open · pending review">
@@ -88,7 +88,7 @@ export function RecommendationsPage() {
 
 function Stat({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
-    <div className="bg-white border border-[#E5E7EB] p-5 rounded-lg flex items-center justify-between">
+    <div className="bg-app-surface border border-app-border p-5 rounded-lg flex items-center justify-between">
       <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#9CA3AF]">{label}</p>
       <span className={cn('text-2xl font-light italic tabular-nums px-3 py-0.5 rounded', accent)}>
         {value}
@@ -110,7 +110,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Empty({ msg }: { msg: string }) {
   return (
-    <div className="bg-white border border-dashed border-[#E5E7EB] rounded-lg p-10 text-center">
+    <div className="bg-app-surface border border-dashed border-app-border rounded-lg p-10 text-center">
       <p className="text-[#9CA3AF] italic text-sm">{msg}</p>
     </div>
   );
@@ -128,7 +128,7 @@ function List({
       {recs.map((r) => (
         <div
           key={r.id}
-          className="bg-white border border-[#E5E7EB] rounded-lg p-5 flex flex-col gap-3"
+          className="bg-app-surface border border-app-border rounded-lg p-5 flex flex-col gap-3"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 min-w-0">
@@ -155,7 +155,7 @@ function List({
               {r.risk}
             </span>
           </div>
-          <p className="text-[11px] text-[#6B7280] leading-relaxed">{r.detail}</p>
+          <p className="text-[11px] text-app-secondary leading-relaxed">{r.detail}</p>
           <div className="flex items-center justify-between mt-1 pt-3 border-t border-[#F3F4F6]">
             <span className="text-[11px] font-mono text-emerald-700 font-semibold">
               {r.savings}
@@ -164,21 +164,21 @@ function List({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onUpdate(r.id, 'dismissed')}
-                  className="p-1.5 hover:bg-gray-50 rounded text-[#6B7280] transition-colors"
+                  className="p-1.5 hover:bg-app-bg rounded text-app-secondary transition-colors"
                   title="Dismiss"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onUpdate(r.id, 'accepted')}
-                  className="px-3 py-1.5 bg-[#111827] text-white text-[10px] font-bold uppercase tracking-[0.18em] rounded hover:bg-black transition-all flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-app-input text-app-primary text-[10px] font-bold uppercase tracking-[0.18em] rounded hover:bg-app-hover transition-all flex items-center gap-1.5"
                 >
                   <Check className="w-3 h-3" />
                   Accept
                 </button>
               </div>
             ) : (
-              <span className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#6B7280]">
+              <span className="text-[10px] uppercase tracking-[0.18em] font-bold text-app-secondary">
                 {r.status}
               </span>
             )}

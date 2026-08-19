@@ -11,18 +11,18 @@ interface Props {
 const TYPE_COLORS: Record<string, string> = {
   error: 'text-red-500',
   warn: 'text-amber-500',
-  agent: 'text-blue-500',
+  agent: 'text-app-brand',
   tool: 'text-purple-500',
   info: 'text-[#9CA3AF]',
 };
 
 const ROLE_COLORS: Record<string, string> = {
   orchestrator: 'text-slate-700',
-  monitoring: 'text-blue-600',
+  monitoring: 'text-app-brand',
   diagnosis: 'text-purple-600',
   remediation: 'text-amber-600',
   optimization: 'text-emerald-600',
-  learning: 'text-indigo-600',
+  learning: 'text-app-brand',
 };
 
 export function LiveLogStream({ logs, filter, height = '100%', compact = false }: Props) {
@@ -48,7 +48,7 @@ export function LiveLogStream({ logs, filter, height = '100%', compact = false }
         <div
           key={log.id}
           className={cn(
-            'flex gap-4 py-1 px-3 rounded-sm hover:bg-gray-50 transition-colors border-l-2 border-transparent hover:border-gray-200',
+            'flex gap-4 py-1 px-3 rounded-sm hover:bg-app-bg transition-colors border-l-2 border-transparent hover:border-app-border',
             compact ? 'text-[10px]' : 'text-[11px]',
           )}
         >
@@ -65,7 +65,7 @@ export function LiveLogStream({ logs, filter, height = '100%', compact = false }
             <span
               className={cn(
                 'font-bold uppercase tracking-tight w-20 shrink-0 truncate',
-                ROLE_COLORS[log.agent_role] || 'text-[#6B7280]',
+                ROLE_COLORS[log.agent_role] || 'text-app-secondary',
               )}
             >
               {log.agent_role}
@@ -74,7 +74,7 @@ export function LiveLogStream({ logs, filter, height = '100%', compact = false }
           <span
             className={cn(
               'leading-relaxed flex-1 break-words',
-              log.type === 'agent' ? 'text-[#111827] font-medium' : 'text-[#6B7280]',
+              log.type === 'agent' ? 'text-app-primary font-medium' : 'text-app-secondary',
             )}
           >
             {log.msg}

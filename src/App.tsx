@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { type ReactNode } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { StoreProvider } from "./hooks/useStore";
@@ -104,7 +105,7 @@ function Shell() {
           }}
         />
       )}
-      <div className="flex flex-col h-screen bg-[#F9FAFB] text-[#111827] overflow-hidden">
+      <div className="flex flex-col h-screen bg-app-bg text-app-primary overflow-hidden">
         <Header
           title={meta.title}
           subtitle={meta.subtitle}
@@ -138,6 +139,15 @@ function Shell() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const theme = localStorage.getItem('theme');
+    if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />

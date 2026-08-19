@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from 'lucide-react';
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, auth } from "../services/api";
@@ -6,6 +7,7 @@ export function LoginPage() {
   const nav = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,17 +27,17 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB]">
-      <div className="w-full max-w-sm bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
+    <div className="min-h-screen flex items-center justify-center login-bg">
+      <div className="w-full max-w-sm login-card border border-app-border rounded-2xl p-8 shadow-sm">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-[#111827]">
+          <h1 className="text-2xl font-semibold text-app-primary">
             DataOps Orchestrator
           </h1>
-          <p className="text-sm text-[#6B7280] mt-1">Sign in to continue</p>
+          <p className="text-sm text-app-secondary mt-1">Sign in to continue</p>
         </div>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs uppercase tracking-wide text-[#6B7280] mb-1">
+            <label className="block text-xs uppercase tracking-wide text-app-secondary mb-1">
               Email
             </label>
             <input
@@ -43,26 +45,39 @@ export function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-white text-[#111827] focus:outline-none focus:border-[#111827]"
+              className="w-full px-3 py-2 rounded-lg border border-app-border bg-app-surface text-app-primary focus:outline-none focus:border-app-btn focus:ring-1 focus:ring-app-btn"
             />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-wide text-[#6B7280] mb-1">
+            <label className="block text-xs uppercase tracking-wide text-app-secondary mb-1">
               Password
             </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-white text-[#111827] focus:outline-none focus:border-[#111827]"
-            />
+                        <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-app-border login-card text-app-primary focus:outline-none focus:border-app-btn focus:ring-1 focus:ring-app-btn pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-app-secondary hover:text-app-primary focus:outline-none"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
           {err && <div className="text-sm text-red-600">{err}</div>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 rounded-lg bg-[#111827] text-white text-sm font-medium hover:bg-black disabled:opacity-60"
+            className="w-full py-2 rounded-lg bg-app-btn text-white text-sm font-medium hover:bg-app-hover disabled:opacity-60"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>

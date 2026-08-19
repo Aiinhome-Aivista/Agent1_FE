@@ -34,7 +34,7 @@ export function DeleteConfirmModal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="bg-white rounded-2xl border border-[#E5E7EB] w-full max-w-md overflow-hidden shadow-2xl"
+            className="bg-app-surface rounded-2xl border border-app-border w-full max-w-md overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
@@ -44,23 +44,23 @@ export function DeleteConfirmModal({
                 </div>
                 <button
                   onClick={onClose}
-                  className="text-[#9CA3AF] hover:text-[#111827] transition-colors"
+                  className="text-[#9CA3AF] hover:text-app-primary transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <h3 className="text-lg font-bold text-[#111827] mb-2">{title}</h3>
-              <p className="text-sm text-[#6B7280] leading-relaxed">
+              <h3 className="text-lg font-bold text-app-primary mb-2">{title}</h3>
+              <p className="text-sm text-app-secondary leading-relaxed">
                 {description}
               </p>
             </div>
 
-            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#F9FAFB] border-t border-[#E5E7EB]">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-app-bg border-t border-app-border">
               <button
                 onClick={onClose}
                 disabled={busy}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-[#4B5563] hover:bg-[#E5E7EB] transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-app-secondary hover:bg-[#E5E7EB] transition-all disabled:opacity-50"
               >
                 Cancel
               </button>

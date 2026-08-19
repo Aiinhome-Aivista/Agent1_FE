@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useStore } from "../hooks/useStore";
-import { auth } from "../services/api";
 
 const NAV = [
   { to: "/app", icon: LayoutDashboard, label: "Dashboard" },
@@ -42,30 +41,26 @@ export function Sidebar() {
     (i) => i.is_active !== false,
   ).length;
 
-  const handleLogout = () => {
-    auth.clearToken();
-    window.location.href = "/";
-  };
 
   return (
     <aside
       className={cn(
-        "bg-white border-r border-[#E5E7EB] flex flex-col shrink-0 transition-all duration-300 ease-in-out relative group",
+        "bg-app-surface border-r border-app-border flex flex-col shrink-0 transition-all duration-300 ease-in-out relative group",
         isCollapsed ? "w-20" : "w-64",
       )}
     >
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className={cn(
-          "absolute -right-3 top-24 w-6 h-12 bg-white border border-[#E5E7EB] rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all z-50 hover:bg-[#F9FAFB] hover:border-[#D1D5DB]",
+          "absolute -right-3 top-24 w-6 h-12 bg-app-surface border border-app-border rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all z-50 hover:bg-app-bg hover:border-app-border",
           "after:content-[''] after:w-0.5 after:h-4 after:bg-[#E5E7EB] after:rounded-full after:hover:bg-[#9CA3AF] after:transition-colors",
         )}
         title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
       >
         {isCollapsed ? (
-          <ChevronRight className="w-3 h-3 text-[#6B7280]" />
+          <ChevronRight className="w-3 h-3 text-app-secondary" />
         ) : (
-          <ChevronLeft className="w-3 h-3 text-[#6B7280]" />
+          <ChevronLeft className="w-3 h-3 text-app-secondary" />
         )}
       </button>
 
@@ -85,8 +80,8 @@ export function Sidebar() {
                 cn(
                   "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-[13px] font-medium overflow-hidden",
                   isActive
-                    ? "bg-[#F3F4F6] text-[#111827]"
-                    : "text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111827]",
+                    ? "bg-app-surface text-app-primary"
+                    : "text-app-secondary hover:bg-app-bg hover:text-app-primary",
                   isCollapsed ? "justify-center px-0 w-10 mx-auto" : "",
                 )
               }
@@ -100,7 +95,7 @@ export function Sidebar() {
                   </span>
                   {/* Temporarily commented out for UI
                   {item.to === "/app/incidents" && openIncidents > 0 && (
-                    <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#111827] text-white text-[10px] font-bold">
+                    <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-app-input text-app-primary text-[10px] font-bold">
                       {openIncidents}
                     </span>
                   )}
@@ -111,7 +106,7 @@ export function Sidebar() {
               {isCollapsed &&
                 item.to === "/app/incidents" &&
                 openIncidents > 0 && (
-                  <div className="absolute top-1 right-1 w-2 h-2 bg-[#111827] rounded-full border border-white" />
+                  <div className="absolute top-1 right-1 w-2 h-2 bg-app-input rounded-full border border-white" />
                 )}
               */}
             </NavLink>
@@ -121,7 +116,7 @@ export function Sidebar() {
 
       <div
         className={cn(
-          "mt-auto p-6 border-t border-[#E5E7EB]",
+          "mt-auto p-6 border-t border-app-border",
           isCollapsed ? "flex flex-col items-center gap-4 px-0" : "",
         )}
       >
@@ -137,7 +132,7 @@ export function Sidebar() {
                   state.connected ? "bg-emerald-500" : "bg-amber-500",
                 )}
               />
-              <span className="text-[9px] uppercase tracking-tight font-bold text-[#6B7280]">
+              <span className="text-[9px] uppercase tracking-tight font-bold text-app-secondary">
                 {state.connected ? "Live" : "Reconnecting"}
               </span>
             </div>
@@ -152,21 +147,6 @@ export function Sidebar() {
           />
         )}
 
-        <button
-          onClick={handleLogout}
-          className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 rounded-md text-[#6B7280] hover:bg-rose-50 hover:text-rose-600 transition-all text-[13px] font-medium group/logout overflow-hidden",
-            isCollapsed ? "justify-center px-0 w-10 mx-auto" : "",
-          )}
-          title={isCollapsed ? "Sign Out" : ""}
-        >
-          <LogOut className="w-4 h-4 group-hover/logout:rotate-12 transition-transform shrink-0" />
-          {!isCollapsed && (
-            <span className="whitespace-nowrap animate-in fade-in duration-300">
-              Sign Out
-            </span>
-          )}
-        </button>
       </div>
     </aside>
   );

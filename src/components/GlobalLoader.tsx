@@ -14,7 +14,7 @@ export function GlobalLoader() {
           className="fixed top-0 left-0 right-0 z-[9999] h-1"
         >
           {/* Progress bar background */}
-          <div className="absolute inset-0 bg-blue-500/10" />
+          <div className="absolute inset-0 bg-app-btn/10" />
           
           {/* Animated progress bar */}
           <motion.div
@@ -25,7 +25,7 @@ export function GlobalLoader() {
               duration: 1.5,
               ease: "linear"
             }}
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500 to-transparent w-full"
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-app-brand to-transparent w-full"
           />
         </motion.div>
       )}

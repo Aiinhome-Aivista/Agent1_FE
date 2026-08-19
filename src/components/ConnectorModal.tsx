@@ -116,23 +116,23 @@ const EMPTY_CREDS: CredMap = {
 };
 
 const STATUS_DOT: Record<string, string> = {
-  CONNECTED: "bg-emerald-500",
-  ERROR: "bg-red-500",
-  PENDING: "bg-amber-500",
-  connected: "bg-emerald-500",
-  error: "bg-red-500",
-  not_configured: "bg-gray-400",
-  pending: "bg-amber-500",
+  CONNECTED: "bg-app-brand",
+  ERROR: "bg-app-secondary",
+  PENDING: "bg-app-btn",
+  connected: "bg-app-brand",
+  error: "bg-app-secondary",
+  not_configured: "bg-app-placeholder",
+  pending: "bg-app-btn",
 };
 
 // ─── Icon component ───────────────────────────────────────────────────────────
 
 function ConnectorIcon({ type, size = 16 }: { type: string; size?: number }) {
   const cfg: Record<string, { icon: React.ElementType; color: string }> = {
-    ADF: { icon: Workflow, color: "text-sky-600" },
-    DATABRICKS: { icon: Database, color: "text-amber-600" },
-    GIT: { icon: GitBranch, color: "text-violet-600" },
-    AWS_GLUE: { icon: Zap, color: "text-orange-500" },
+    ADF: { icon: Workflow, color: "text-app-secondary" },
+    DATABRICKS: { icon: Database, color: "text-app-brand" },
+    GIT: { icon: GitBranch, color: "text-app-primary" },
+    AWS_GLUE: { icon: Zap, color: "text-app-brand" },
   };
   const { icon: Icon, color } = cfg[type] ?? cfg.ADF;
   return <Icon size={size} className={color} strokeWidth={2.25} />;
@@ -231,25 +231,25 @@ export function ConnectorModal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.96, opacity: 0, y: 8 }}
             transition={{ duration: 0.18 }}
-            className="bg-white rounded-2xl border border-[#E5E7EB] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl my-2"
+            className="bg-app-surface rounded-2xl border border-app-border w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl my-2"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-app-border">
               <div className="flex items-center gap-3 min-w-0">
                 {view === "new" && (
                   <button
                     onClick={() => setView("list")}
-                    className="text-[#6B7280] hover:text-[#111827]"
+                    className="text-app-secondary hover:text-app-primary"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                 )}
                 <div className="min-w-0">
-                  <h2 className="text-lg font-semibold text-[#111827]">
+                  <h2 className="text-lg font-semibold text-app-primary">
                     {view === "list" ? "Connectors" : "New connector"}
                   </h2>
-                  <p className="text-xs text-[#6B7280] mt-0.5">
+                  <p className="text-xs text-app-secondary mt-0.5">
                     {view === "list"
                       ? "Add, edit, test, or remove integrations."
                       : "Credentials are encrypted at rest with Fernet"}
@@ -258,7 +258,7 @@ export function ConnectorModal({
               </div>
               <button
                 onClick={onClose}
-                className="text-[#9CA3AF] hover:text-[#111827] transition-colors"
+                className="text-[#9CA3AF] hover:text-app-primary transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -339,7 +339,7 @@ function ListView({
         </h3>
         <button
           onClick={onAdd}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#111827] text-white text-xs font-medium hover:bg-black"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-app-brand text-white text-xs font-medium hover:bg-app-hover"
         >
           <Plus className="w-3.5 h-3.5" />
           Add connector
@@ -347,11 +347,11 @@ function ListView({
       </div>
 
       {loading ? (
-        <p className="text-sm text-[#6B7280] py-8 text-center animate-pulse">
+        <p className="text-sm text-app-secondary py-8 text-center animate-pulse">
           Loading connectors...
         </p>
       ) : connectors.length === 0 ? (
-        <p className="text-sm text-[#6B7280] py-8 text-center">
+        <p className="text-sm text-app-secondary py-8 text-center">
           No connectors yet. Click{" "}
           <span className="font-medium">Add connector</span> to get started.
         </p>
@@ -363,14 +363,14 @@ function ListView({
             return (
               <div
                 key={conn.id}
-                className="flex items-center justify-between gap-3 px-4 py-4 border border-[#E5E7EB] rounded-xl bg-white shadow-sm hover:border-gray-300 transition-all"
+                className="group flex items-center justify-between gap-3 px-4 py-4 border border-app-border rounded-xl bg-gradient-to-br from-app-surface to-app-bg shadow-sm hover:border-app-border-orange hover:shadow-[0_4px_20px_rgba(255,90,20,0.05)] transition-all"
               >
                 <div className="flex items-center gap-4 min-w-0 flex-1">
-                  <div className="w-11 h-11 rounded-lg bg-[#F9FAFB] border border-[#F3F4F6] flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 rounded-lg bg-app-bg border border-app-border flex items-center justify-center shrink-0">
                     <ConnectorIcon type={conn.type} size={20} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[15px] font-bold text-[#111827] tracking-tight truncate">
+                    <p className="text-[15px] font-bold text-app-primary tracking-tight truncate">
                       {conn.name}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
@@ -389,7 +389,7 @@ function ListView({
                 <div className="flex items-center gap-6 shrink-0">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${dot}`} />
-                    <span className="text-[11px] font-black text-[#6B7280] uppercase tracking-widest">
+                    <span className="text-[11px] font-black text-app-secondary uppercase tracking-widest">
                       {conn.status}
                     </span>
                   </div>
@@ -398,14 +398,14 @@ function ListView({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onViewPipelines(conn)}
-                    className="p-1.5 rounded-md text-[#9CA3AF] hover:text-[#111827] transition-colors"
+                    className="p-1.5 rounded-md text-[#9CA3AF] hover:text-app-primary transition-colors"
                     title="Edit configuration"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => onTest(conn)}
-                    className="px-3 py-1.5 border border-[#E5E7EB] rounded-md text-xs font-bold text-[#4B5563] hover:bg-[#F9FAFB] transition-all"
+                    className="px-3 py-1.5 border border-app-border rounded-md text-xs font-bold text-app-secondary hover:bg-app-bg transition-all"
                   >
                     Edit
                   </button>
@@ -497,7 +497,7 @@ function NewConnectorForm({
     <form onSubmit={onSubmit} className="p-6 space-y-5" autoComplete="off">
       {/* Type selector */}
       <div>
-        <label className="block text-xs uppercase tracking-wide text-[#6B7280] font-semibold mb-2">
+        <label className="block text-xs uppercase tracking-wide text-app-secondary font-semibold mb-2">
           Type
         </label>
         <div className="grid grid-cols-3 gap-2">
@@ -508,13 +508,13 @@ function NewConnectorForm({
               onClick={() => onTypeChange(opt.value)}
               className={`p-3 rounded-lg border text-left transition-all ${
                 type === opt.value
-                  ? "border-[#111827] bg-[#F9FAFB] shadow-sm ring-1 ring-[#111827]"
-                  : "border-[#E5E7EB] hover:border-[#9CA3AF] bg-white"
+                  ? "border-[#111827] bg-app-bg shadow-sm ring-1 ring-[#111827]"
+                  : "border-app-border hover:border-[#9CA3AF] bg-app-surface"
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <ConnectorIcon type={opt.value} size={14} />
-                <span className="text-sm font-medium text-[#111827]">
+                <span className="text-sm font-medium text-app-primary">
                   {opt.label}
                 </span>
               </div>
@@ -526,11 +526,11 @@ function NewConnectorForm({
 
       {/* Display name */}
       <div>
-        <label className="block text-xs uppercase tracking-wide text-[#6B7280] font-semibold mb-1.5">
+        <label className="block text-xs uppercase tracking-wide text-app-secondary font-semibold mb-1.5">
           Display name
         </label>
         <input
-          className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#111827] focus:outline-none focus:border-[#111827]"
+          className="w-full px-3 py-2 rounded-lg border border-app-border bg-app-surface text-sm text-app-primary focus:outline-none focus:border-[#111827]"
           placeholder="e.g. prod-adf-westeurope"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -559,18 +559,18 @@ function NewConnectorForm({
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#E5E7EB]">
+      <div className="flex items-center justify-end gap-3 pt-2 border-t border-app-border">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 rounded-lg text-sm text-[#374151] hover:bg-[#F3F4F6] transition-colors"
+          className="px-4 py-2 rounded-lg text-sm text-app-primary hover:bg-app-surface transition-colors"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={busy || testing}
-          className="px-4 py-2 rounded-lg bg-[#111827] text-white text-sm font-medium hover:bg-black disabled:opacity-60 transition-colors"
+          className="px-4 py-2 rounded-lg bg-app-brand text-white text-sm font-medium hover:bg-app-hover disabled:opacity-60 transition-colors"
         >
           {busy ? "Saving…" : testing ? "Testing…" : "Connect & sync"}
         </button>
@@ -592,7 +592,7 @@ function FieldGroup({
 }) {
   return (
     <div>
-      <label className="block text-xs uppercase tracking-wide text-[#6B7280] font-semibold mb-1.5">
+      <label className="block text-xs uppercase tracking-wide text-app-secondary font-semibold mb-1.5">
         {label}
       </label>
       {children}
@@ -602,7 +602,7 @@ function FieldGroup({
 }
 
 const inputCls =
-  "w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#111827] focus:outline-none focus:border-[#111827]";
+  "w-full px-3 py-2 rounded-lg border border-app-border bg-app-surface text-sm text-app-primary focus:outline-none focus:border-[#111827]";
 
 function ADFForm({
   creds,
@@ -612,9 +612,9 @@ function ADFForm({
   update: (k: string, v: string) => void;
 }) {
   return (
-    <div className="space-y-3 p-4 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB]">
-      <p className="text-[11px] text-[#6B7280]">
-        <Workflow size={11} className="inline mr-1 text-sky-600" />
+    <div className="space-y-3 p-4 rounded-lg bg-app-bg border border-app-border">
+      <p className="text-[11px] text-app-secondary">
+        <Workflow size={11} className="inline mr-1 text-app-secondary" />
         Azure AD service principal — needs{" "}
         <strong>Data Factory Contributor</strong> on the target factory.
       </p>
@@ -682,9 +682,9 @@ function DatabricksForm({
   update: (k: string, v: string) => void;
 }) {
   return (
-    <div className="space-y-3 p-4 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB]">
-      <p className="text-[11px] text-[#6B7280]">
-        <Database size={11} className="inline mr-1 text-amber-600" />
+    <div className="space-y-3 p-4 rounded-lg bg-app-bg border border-app-border">
+      <p className="text-[11px] text-app-secondary">
+        <Database size={11} className="inline mr-1 text-app-brand" />
         Generate a PAT in User Settings → Developer → Access Tokens.
       </p>
       <FieldGroup
@@ -721,9 +721,9 @@ function GitForm({
   update: (k: string, v: string) => void;
 }) {
   return (
-    <div className="space-y-3 p-4 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB]">
-      <p className="text-[11px] text-[#6B7280]">
-        <GitBranch size={11} className="inline mr-1 text-violet-600" />
+    <div className="space-y-3 p-4 rounded-lg bg-app-bg border border-app-border">
+      <p className="text-[11px] text-app-secondary">
+        <GitBranch size={11} className="inline mr-1 text-app-primary" />
         GitHub PAT with <strong>repo</strong> + <strong>actions:read</strong>{" "}
         scopes.
       </p>
@@ -781,9 +781,9 @@ function GlueForm({
   update: (k: string, v: string) => void;
 }) {
   return (
-    <div className="space-y-3 p-4 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB]">
-      <p className="text-[11px] text-[#6B7280]">
-        <Zap size={11} className="inline mr-1 text-orange-500" />
+    <div className="space-y-3 p-4 rounded-lg bg-app-bg border border-app-border">
+      <p className="text-[11px] text-app-secondary">
+        <Zap size={11} className="inline mr-1 text-app-brand" />
         Connect to AWS Glue — requires <strong>
           GlueReadOnlyAccess
         </strong> and <strong>CloudWatchLogsReadOnlyAccess</strong>.

@@ -102,18 +102,18 @@ export function MemoryPage() {
                   className={cn(
                     'p-6 rounded-lg border text-left transition-all relative overflow-hidden',
                     active
-                      ? 'bg-[#111827] border-[#111827] text-white'
-                      : 'bg-white border-[#E5E7EB] hover:border-gray-300',
+                      ? 'bg-app-surface border-app-brand text-app-primary'
+                      : 'bg-app-surface border-app-border hover:border-app-border',
                   )}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div
                       className={cn(
                         'w-10 h-10 rounded-md flex items-center justify-center',
-                        active ? 'bg-white/10' : 'bg-gray-50',
+                        active ? 'bg-app-surface/10' : 'bg-app-surface',
                       )}
                     >
-                      <M.icon className={cn('w-5 h-5', active ? 'text-white' : 'text-[#111827]')} />
+                      <M.icon className={cn('w-5 h-5', active ? 'text-app-primary' : 'text-app-primary')} />
                     </div>
                     <ArrowRight
                       className={cn(
@@ -122,13 +122,13 @@ export function MemoryPage() {
                       )}
                     />
                   </div>
-                  <h3 className={cn('text-lg font-medium tracking-tight', active && 'text-white')}>
+                  <h3 className={cn('text-lg font-medium tracking-tight', active && 'text-app-primary')}>
                     {M.label}
                   </h3>
                   <p
                     className={cn(
                       'text-[11px] mt-1 leading-relaxed',
-                      active ? 'text-white/70' : 'text-[#6B7280]',
+                      active ? 'text-app-primary/70' : 'text-app-secondary',
                     )}
                   >
                     {M.description}
@@ -140,7 +140,7 @@ export function MemoryPage() {
           */}
 
           {/* Search bar */}
-          <div className="bg-white border border-[#E5E7EB] rounded-lg p-2 flex items-center gap-2">
+          <div className="bg-app-surface border border-app-border rounded-lg p-2 flex items-center gap-2">
             <Search className="w-4 h-4 text-[#9CA3AF] ml-3" />
             <input
               value={query}
@@ -155,7 +155,7 @@ export function MemoryPage() {
                   setQuery('');
                   setSearchResults([]);
                 }}
-                className="text-xs text-[#6B7280] hover:text-[#111827] px-2"
+                className="text-xs text-app-secondary hover:text-app-primary px-2"
               >
                 Clear
               </button>
@@ -163,7 +163,7 @@ export function MemoryPage() {
             <button
               onClick={onSearch}
               disabled={searching}
-              className="px-4 py-2 bg-[#111827] text-white text-[10px] font-bold uppercase tracking-[0.18em] rounded hover:bg-black transition-all disabled:opacity-50"
+              className="px-4 py-2 bg-app-surface text-app-primary text-[10px] font-bold uppercase tracking-[0.18em] rounded hover:bg-app-hover transition-all disabled:opacity-50"
             >
               {searching ? 'Searching…' : 'RAG Search'}
             </button>
@@ -180,7 +180,7 @@ export function MemoryPage() {
               {searchResults.length > 0 && (
                 <button
                   onClick={() => setSearchResults([])}
-                  className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#6B7280] hover:text-[#111827]"
+                  className="text-[10px] uppercase tracking-[0.18em] font-bold text-app-secondary hover:text-app-primary"
                 >
                   Clear results
                 </button>
@@ -310,7 +310,7 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
   }, [parsedRootCause]);
 
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-lg p-5 hover:border-gray-300 transition-colors flex flex-col h-fit">
+    <div className="bg-app-surface border border-app-border rounded-lg p-5 hover:border-app-border transition-colors flex flex-col h-fit">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-snug">{m.title}</p>
@@ -321,7 +321,7 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           {m.similarity != null && (
-            <span className="font-mono text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+            <span className="font-mono text-[10px] text-app-brand bg-app-bg px-2 py-0.5 rounded">
               sim {m.similarity.toFixed(2)}
             </span>
           )}
@@ -329,7 +329,7 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
             <span
               className={cn(
                 'text-[9px] uppercase tracking-[0.15em] font-bold px-2 py-0.5 rounded',
-                m.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700',
+                m.success ? 'bg-app-surface border border-emerald-500/30 text-emerald-400' : 'bg-app-surface border border-rose-500/30 text-rose-400',
               )}
             >
               {m.success ? 'success' : 'failed'}
@@ -337,23 +337,23 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
           )}
         </div>
       </div>
-      <p className="text-xs text-[#6B7280] leading-relaxed mb-4">{m.summary}</p>
+      <p className="text-xs text-app-secondary leading-relaxed mb-4">{m.summary}</p>
 
       {/* Root Cause UI */}
       {parsedRootCause && (
         <div className="mt-auto">
           <div 
-            className="p-3 bg-slate-50 rounded-lg border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
+            className="p-3 bg-app-bg rounded-lg border border-app-border cursor-pointer hover:border-app-brand transition-colors shadow-sm"
             onClick={() => setExpanded(!expanded)}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-3 h-3 text-amber-600" />
-                <span className="text-[10px] uppercase tracking-[0.18em] text-slate-600 font-bold">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-app-secondary font-bold">
                   Root Cause Analysis
                 </span>
               </div>
-              {expanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
+              {expanded ? <ChevronUp className="w-3 h-3 text-app-secondary" /> : <ChevronDown className="w-3 h-3 text-app-secondary" />}
             </div>
             
             {expanded && (
@@ -362,8 +362,8 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
                 {(parsedRootCause.error || parsedRootCause.error_summary) && (
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5">
-                      <Terminal className="w-3 h-3 text-slate-400" />
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Error Summary</span>
+                      <Terminal className="w-3 h-3 text-app-secondary" />
+                      <span className="text-[9px] font-bold text-app-secondary uppercase tracking-wider">Error Summary</span>
                     </div>
                     <p className="text-[11px] text-red-600 font-medium">
                       {parsedRootCause.error?.top_level_error || 
@@ -378,12 +378,12 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
                 {(parsedRootCause.severity || parsedRootCause.status) && (
                   <div className="flex gap-2">
                     {parsedRootCause.severity && (
-                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-app-surface text-app-primary">
                         {parsedRootCause.severity}
                       </span>
                     )}
                     {parsedRootCause.status && (
-                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-app-surface text-app-brand">
                         {parsedRootCause.status}
                       </span>
                     )}
@@ -394,19 +394,19 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
                 {parsedRootCause.recommended_actions && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5">
-                      <ListChecks className="w-3 h-3 text-slate-400" />
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Recommended Actions</span>
+                      <ListChecks className="w-3 h-3 text-app-secondary" />
+                      <span className="text-[9px] font-bold text-app-secondary uppercase tracking-wider">Recommended Actions</span>
                     </div>
                     <div className="space-y-2">
                       {(Array.isArray(parsedRootCause.recommended_actions) 
                         ? parsedRootCause.recommended_actions 
                         : [parsedRootCause.recommended_actions]
                       ).slice(0, 4).map((ra: any, i: number) => (
-                        <div key={i} className="bg-white p-2 rounded border border-slate-100 shadow-sm">
-                          <p className="text-[11px] font-semibold text-slate-700">
+                        <div key={i} className="bg-app-surface p-2 rounded border border-app-border shadow-sm">
+                          <p className="text-[11px] font-semibold text-app-primary">
                             {typeof ra === 'string' ? ra : ra.action}
                           </p>
-                          {ra.description && <p className="text-[10px] text-slate-500 mt-0.5">{ra.description}</p>}
+                          {ra.description && <p className="text-[10px] text-app-secondary mt-0.5">{ra.description}</p>}
                         </div>
                       ))}
                     </div>
@@ -418,13 +418,13 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5">
                       <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Diagnosis</span>
+                      <span className="text-[9px] font-bold text-app-secondary uppercase tracking-wider">Diagnosis</span>
                     </div>
                     <div className="space-y-2">
                       {(() => {
                         const causes = parsedRootCause.diagnosis.potential_causes || parsedRootCause.diagnosis.likely_causes || [];
                         return (Array.isArray(causes) ? causes : [causes]).slice(0, 3).map((pc: any, i: number) => (
-                          <div key={i} className="text-[10px] text-slate-600 pl-2 border-l-2 border-emerald-200">
+                          <div key={i} className="text-[10px] text-app-secondary pl-2 border-l-2 border-emerald-200">
                             {typeof pc === 'string' ? (
                               pc
                             ) : (
@@ -444,8 +444,8 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
                 {parsedRootCause.next_steps && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5">
-                      <ArrowRight className="w-3 h-3 text-blue-500" />
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Next Steps</span>
+                      <ArrowRight className="w-3 h-3 text-app-brand" />
+                      <span className="text-[9px] font-bold text-app-secondary uppercase tracking-wider">Next Steps</span>
                     </div>
                     <div className="space-y-3">
                       {typeof parsedRootCause.next_steps === 'object' ? (
@@ -453,12 +453,12 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
                           {/* Immediate Actions */}
                           {(parsedRootCause.next_steps.immediate_actions || parsedRootCause.next_steps.immediate) && (
                             <div className="space-y-1.5">
-                              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest ml-1">Immediate</p>
+                              <p className="text-[8px] font-bold text-app-secondary uppercase tracking-widest ml-1">Immediate</p>
                               {(() => {
                                 const actions = parsedRootCause.next_steps.immediate_actions || parsedRootCause.next_steps.immediate;
                                 return (Array.isArray(actions) ? actions : [actions]).slice(0, 3).map((act: any, i: number) => (
-                                  <div key={i} className="text-[10px] text-slate-600 bg-blue-50/50 p-2 rounded border border-blue-100/50">
-                                    <span className="font-semibold text-blue-700">
+                                  <div key={i} className="text-[10px] text-app-secondary bg-app-bg p-2 rounded border border-app-border">
+                                    <span className="font-semibold text-app-brand">
                                       {typeof act === 'string' ? act : act.action || 'Action'}:
                                     </span>{' '}
                                     {typeof act === 'object' && act.description}
@@ -470,13 +470,13 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
                           
                           {/* Fallback if it's an object but not in expected format */}
                           {(!parsedRootCause.next_steps.immediate_actions && !parsedRootCause.next_steps.immediate) && (
-                            <div className="text-[10px] text-slate-600 bg-blue-50/50 p-2 rounded border border-blue-100/50">
+                            <div className="text-[10px] text-app-secondary bg-app-bg p-2 rounded border border-app-border">
                               {JSON.stringify(parsedRootCause.next_steps)}
                             </div>
                           )}
                         </div>
                       ) : (
-                        <div className="text-[10px] text-slate-600 bg-blue-50/50 p-2 rounded border border-blue-100/50 whitespace-pre-wrap">
+                        <div className="text-[10px] text-app-secondary bg-app-bg p-2 rounded border border-app-border whitespace-pre-wrap">
                           {parsedRootCause.next_steps}
                         </div>
                       )}
@@ -486,13 +486,13 @@ function MemoryCard({ m }: { m: MemoryEntry }) {
 
                 {/* Fallback for unhandled objects or missing structured data */}
                 {(!hasStructuredData && typeof parsedRootCause !== 'string') && (
-                  <pre className="text-[9px] font-mono p-2 bg-slate-900 text-slate-300 rounded overflow-x-auto">
+                  <pre className="text-[9px] font-mono p-2 bg-black/40 text-app-secondary text-opacity-80 rounded overflow-x-auto">
                     {JSON.stringify(parsedRootCause, null, 2)}
                   </pre>
                 )}
                 
                 {typeof parsedRootCause === 'string' && (
-                  <p className="text-[11px] text-slate-600 whitespace-pre-wrap font-mono bg-slate-100 p-2 rounded">
+                  <p className="text-[11px] text-app-secondary whitespace-pre-wrap font-mono bg-app-bg p-2 rounded">
                     {parsedRootCause}
                   </p>
                 )}

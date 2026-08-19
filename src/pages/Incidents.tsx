@@ -152,12 +152,12 @@ export function IncidentsPage() {
   );
 
   return (
-    <div className="flex-1 flex min-h-0 bg-[#F9FAFB]">
+    <div className="flex-1 flex min-h-0 bg-app-bg">
       {/* ─── LEFT: filter + incident list ───────────────────────────── */}
-      <aside className="w-[340px] shrink-0 border-r border-[#E5E7EB] bg-white flex flex-col">
+      <aside className="w-[340px] shrink-0 border-r border-app-border bg-app-surface flex flex-col">
         {/* Filter pills */}
-        <div className="p-4 border-b border-[#E5E7EB]">
-          <div className="bg-[#F3F4F6] p-1 rounded-lg flex">
+        <div className="p-4 border-b border-app-border">
+          <div className="bg-app-input p-1 rounded-lg flex shadow-inner border border-app-border/50">
             {(["open", "all", "closed"] as FilterTab[]).map((tab) => (
               <button
                 key={tab}
@@ -165,8 +165,8 @@ export function IncidentsPage() {
                 className={cn(
                   "flex-1 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all",
                   filter === tab
-                    ? "bg-[#111827] text-white shadow-sm"
-                    : "text-[#6B7280] hover:text-[#111827]",
+                    ? "bg-app-surface text-app-primary border border-app-border shadow-sm shadow-md border border-app-border/30"
+                    : "text-app-secondary hover:text-app-primary hover:bg-app-bg",
                 )}
               >
                 {tab}
@@ -175,16 +175,16 @@ export function IncidentsPage() {
           </div>
           {/* Search */}
           <div className="relative mt-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9CA3AF]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-app-secondary" />
             <input
               type="text"
               placeholder="Search incidents…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400 focus:bg-white transition-colors"
+              className="w-full pl-9 pr-3 py-2 text-xs bg-app-input border border-app-border rounded-lg focus:outline-none focus:border-app-brand focus:ring-1 focus:ring-app-brand/30 transition-colors text-app-primary placeholder:text-app-secondary"
             />
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] mt-3">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-app-secondary mt-3">
             {filtered.length} INCIDENT{filtered.length === 1 ? "" : "S"}
           </div>
         </div>
@@ -192,11 +192,11 @@ export function IncidentsPage() {
         {/* List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {filtered.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[#9CA3AF]">
+            <div className="p-8 text-center text-xs text-app-secondary">
               No incidents match this filter.
             </div>
           ) : (
-            <ul className="divide-y divide-[#F3F4F6]">
+            <ul className="divide-y divide-app-border">
               {filtered.map((inc) => {
                 const active = String(inc.id) === String(selectedId);
                 const summary = bestSummary(inc);
@@ -205,34 +205,35 @@ export function IncidentsPage() {
                     <button
                       onClick={() => setSelectedId(String(inc.id))}
                       className={cn(
-                        "w-full text-left p-4 transition-colors relative",
-                        active ? "bg-[#F3F4F6]" : "hover:bg-[#F9FAFB]",
+                        "w-full text-left p-4 transition-colors relative group",
+                        active ? "bg-app-surface" : "hover:bg-app-bg cursor-pointer",
                       )}
                     >
-                      {active && (
-                        <span className="absolute left-0 top-0 bottom-0 w-1 bg-[#111827]" />
-                      )}
+                      <span className={cn(
+                        "absolute left-0 top-0 bottom-0 w-1 transition-colors",
+                        active ? "bg-app-brand" : "bg-transparent group-hover:bg-app-brand/50"
+                      )} />
                       <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className="text-[10px] font-bold text-[#6B7280]">
+                        <span className="text-[10px] font-bold text-app-secondary">
                           #{inc.id}
                         </span>
                         <span
                           className={cn(
                             "text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
                             inc.risk_tier === "High"
-                              ? "bg-rose-50 text-rose-700"
+                              ? "bg-app-surface border border-rose-500/30 text-rose-400"
                               : inc.risk_tier === "Medium"
-                                ? "bg-amber-50 text-amber-700"
-                                : "bg-emerald-50 text-emerald-700",
+                                ? "bg-app-surface border border-amber-500/30 text-amber-400"
+                                : "bg-app-surface border border-emerald-500/30 text-emerald-400",
                           )}
                         >
                           {inc.risk_tier}
                         </span>
                       </div>
-                      <div className="text-[13px] font-bold text-[#111827] truncate">
+                      <div className="text-[13px] font-bold text-app-primary truncate">
                         {inc.pipeline_name}
                       </div>
-                      <div className="text-[11px] text-[#6B7280] mt-1 leading-relaxed line-clamp-2">
+                      <div className="text-[11px] text-app-secondary mt-1 leading-relaxed line-clamp-2">
                         {summary}
                       </div>
                       <div className="flex items-center justify-between mt-2">
@@ -240,19 +241,19 @@ export function IncidentsPage() {
                           className={cn(
                             "text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
                             inc.status === "Remediated"
-                              ? "bg-emerald-50 text-emerald-700"
+                              ? "bg-app-surface border border-emerald-500/30 text-emerald-400"
                               : inc.status === "Escalated"
-                                ? "bg-rose-50 text-rose-700"
+                                ? "bg-app-surface border border-rose-500/30 text-rose-400"
                                 : inc.status === "Failed"
-                                  ? "bg-gray-100 text-gray-600"
+                                  ? "bg-app-surface border border-app-border text-app-secondary"
                                   : inc.status === "Processing"
-                                    ? "bg-amber-50 text-amber-700"
-                                    : "bg-blue-50 text-blue-700",
+                                    ? "bg-app-surface border border-amber-500/30 text-amber-400"
+                                    : "bg-app-surface text-app-secondary",
                           )}
                         >
                           {inc.status}
                         </span>
-                        <span className="text-[10px] text-[#9CA3AF] font-medium">
+                        <span className="text-[10px] text-app-secondary font-medium">
                           {timeAgo(inc.detected_at)}
                         </span>
                       </div>
@@ -268,7 +269,7 @@ export function IncidentsPage() {
       {/* ─── RIGHT: timeline pane ───────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto custom-scrollbar p-8">
         {!selected ? (
-          <div className="h-full flex items-center justify-center text-sm text-[#9CA3AF]">
+          <div className="h-full flex items-center justify-center text-sm text-app-secondary">
             Select an incident on the left to inspect its timeline.
           </div>
         ) : (
@@ -315,13 +316,13 @@ function TimelineView({ incident }: TimelineViewProps) {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header strip */}
-      <div className="mb-6 pb-4 border-b border-[#E5E7EB]">
+      <div className="mb-6 pb-4 border-b border-app-border">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-[#111827]">
+            <h2 className="text-lg font-bold text-app-primary">
               {incident.pipeline_name}
             </h2>
-            <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]">
+            <div className="flex items-center gap-3 mt-1 text-xs text-app-secondary">
               <span>Incident #{incident.id}</span>
               <span>·</span>
               <span>{formatDateTime(incident.detected_at)}</span>
@@ -330,12 +331,12 @@ function TimelineView({ incident }: TimelineViewProps) {
                 className={cn(
                   "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
                   incident.status === "Remediated"
-                    ? "bg-emerald-100 text-emerald-700"
+                    ? "bg-app-surface border border-emerald-500/30 text-emerald-400"
                     : incident.status === "Escalated"
-                      ? "bg-rose-100 text-rose-700"
+                      ? "bg-rose-500/20 text-rose-400"
                       : incident.status === "Processing"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-blue-100 text-blue-700",
+                        ? "bg-app-surface border border-amber-500/30 text-amber-400"
+                        : "bg-app-surface text-app-secondary",
                 )}
               >
                 {incident.status}
@@ -344,7 +345,7 @@ function TimelineView({ incident }: TimelineViewProps) {
                 <>
                   <span>·</span>
                   <span
-                    className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 inline-flex items-center gap-1"
+                    className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 inline-flex items-center gap-1"
                     title={`Acknowledged at ${formatDateTime(incident.acknowledged_at)}`}
                   >
                     <UserCheck className="w-3 h-3" /> Acknowledged
@@ -358,7 +359,7 @@ function TimelineView({ incident }: TimelineViewProps) {
                     href={incident.jira_ticket_url || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] font-bold tracking-wider text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded inline-flex items-center hover:bg-blue-100 transition-colors"
+                    className="text-[10px] font-bold tracking-wider text-app-brand bg-app-surface border border-app-border px-1.5 py-0.5 rounded inline-flex items-center hover:bg-app-surface transition-colors"
                   >
                     <Ticket className="w-3 h-3 mr-1" />
                     Jira: {incident.jira_ticket_key}
@@ -371,13 +372,13 @@ function TimelineView({ incident }: TimelineViewProps) {
       </div>
       
       {incident.status === "Awaiting Approval" && (
-        <div className="mb-6 p-5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+        <div className="mb-6 p-5 bg-app-surface border border-amber-500/30 border border-amber-500/30 rounded-xl flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-amber-900 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               Human Approval Required
             </h3>
-            <p className="text-xs text-amber-700 mt-1">
+            <p className="text-xs text-amber-400 mt-1">
               This incident has a remediation plan ready but requires authorization to proceed.
             </p>
           </div>
@@ -385,7 +386,7 @@ function TimelineView({ incident }: TimelineViewProps) {
             <button
               onClick={handleReject}
               disabled={!!loadingAction}
-              className="px-4 py-2 text-xs font-bold text-amber-700 bg-white border border-amber-200 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 text-xs font-bold text-amber-400 bg-app-surface border border-amber-500/30 rounded-lg hover:bg-app-surface border border-amber-500/30 disabled:opacity-50 transition-colors"
             >
               {loadingAction === "reject" ? "Rejecting..." : "Reject"}
             </button>
@@ -527,10 +528,10 @@ function SolutionPanel({ incident }: { incident: Incident }) {
   const confidence = pattern?.confidence ?? incident.confidence_score ?? 0;
 
   return (
-    <div className="mb-6 bg-white border border-[#E5E7EB] rounded-2xl shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-        <BrainCircuit className="w-4 h-4 text-violet-500" />
-        <h3 className="text-sm font-bold text-[#111827]">
+    <div className="mb-6 bg-app-surface border border-app-border rounded-2xl shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-app-border flex items-center gap-2">
+        <BrainCircuit className="w-4 h-4 text-app-brand" />
+        <h3 className="text-sm font-bold text-app-primary">
           Knowledge Base &amp; Code Fix
         </h3>
         {loading && <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin ml-1" />}
@@ -544,59 +545,59 @@ function SolutionPanel({ incident }: { incident: Incident }) {
               className={cn(
                 "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded",
                 cls.is_known
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-amber-50 text-amber-700",
+                  ? "bg-app-surface border border-emerald-500/30 text-emerald-400"
+                  : "bg-app-surface border border-amber-500/30 text-amber-400",
               )}
             >
               {cls.is_known ? "Known error" : "New error type"}
             </span>
           )}
           {cls?.error_type && (
-            <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-700">
+            <span className="text-[10px] font-bold px-2 py-1 rounded bg-app-surface border border-app-border text-app-secondary">
               {cls.error_type}
             </span>
           )}
           {pattern?.support_group && (
-            <span className="text-[10px] font-medium px-2 py-1 rounded bg-sky-50 text-sky-700 inline-flex items-center gap-1">
+            <span className="text-[10px] font-medium px-2 py-1 rounded bg-app-surface border border-sky-500/30 text-sky-400 inline-flex items-center gap-1">
               <Users className="w-3 h-3" /> {pattern.support_group}
             </span>
           )}
           {cls?.auto_fix && (
-            <span className="text-[10px] font-bold px-2 py-1 rounded bg-violet-50 text-violet-700 inline-flex items-center gap-1">
+            <span className="text-[10px] font-bold px-2 py-1 rounded bg-app-surface border border-violet-500/30 text-violet-400 inline-flex items-center gap-1">
               <Sparkles className="w-3 h-3" /> Auto-fixable
             </span>
           )}
         </div>
 
         {cls?.reason && (
-          <p className="text-[11px] text-[#6B7280] leading-relaxed">{cls.reason}</p>
+          <p className="text-[11px] text-app-secondary leading-relaxed">{cls.reason}</p>
         )}
 
         {/* Confidence bar */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+            <span className="text-[10px] font-black uppercase tracking-widest text-app-secondary">
               Solution confidence
             </span>
-            <span className="text-xs font-bold text-[#111827]">
+            <span className="text-xs font-bold text-app-primary">
               {(confidence * 100).toFixed(0)}%
             </span>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-app-input rounded-full overflow-hidden shadow-inner">
             <div
               className={cn(
                 "h-full rounded-full transition-all",
                 confidence >= 0.7
-                  ? "bg-emerald-500"
+                  ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                   : confidence >= 0.4
-                    ? "bg-amber-500"
-                    : "bg-rose-500",
+                    ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+                    : "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)]",
               )}
               style={{ width: `${Math.max(4, Math.min(100, confidence * 100))}%` }}
             />
           </div>
           {pattern && (
-            <p className="text-[10px] text-gray-400 mt-1.5">
+            <p className="text-[10px] text-app-secondary mt-1.5">
               Seen {pattern.occurrence_count}× · {pattern.acceptance_count} accepted ·{" "}
               {pattern.rejection_count} rejected — confidence rises each time a
               human accepts the fix.
@@ -609,7 +610,7 @@ function SolutionPanel({ incident }: { incident: Incident }) {
           <button
             onClick={handleRaisePR}
             disabled={!!busy}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#111827] rounded-lg hover:bg-black disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-app-brand text-white border border-transparent shadow-md hover:bg-[#E04B0E] hover:shadow-[0_4px_20px_rgba(255,90,20,0.2)] rounded-lg disabled:opacity-50 transition-colors"
           >
             {busy === "pr" ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -621,7 +622,7 @@ function SolutionPanel({ incident }: { incident: Incident }) {
           <button
             onClick={() => setShowIngest((v) => !v)}
             disabled={!!busy}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-app-secondary bg-app-surface border border-app-border rounded-lg hover:border-app-brand hover:text-app-primary shadow-sm disabled:opacity-50 transition-colors"
           >
             <Check className="w-3.5 h-3.5" />
             Ingest merged PR
@@ -629,7 +630,7 @@ function SolutionPanel({ incident }: { incident: Incident }) {
           <button
             onClick={openRefine}
             disabled={!!busy}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-app-secondary bg-app-surface border border-app-border rounded-lg hover:border-app-brand hover:text-app-primary shadow-sm disabled:opacity-50 transition-colors"
           >
             <Sparkles className="w-3.5 h-3.5" />
             Refine &amp; approve fix
@@ -637,8 +638,8 @@ function SolutionPanel({ incident }: { incident: Incident }) {
         </div>
 
         {showRefine && (
-          <div className="space-y-2 border-t border-gray-100 pt-3">
-            <p className="text-[11px] text-[#6B7280]">
+          <div className="space-y-2 border-t border-app-border pt-3">
+            <p className="text-[11px] text-app-secondary">
               Edit the root cause / steps if needed, then approve. The approved
               fix is folded back into the knowledge base and graph (history +
               runbooks + this fix), and confidence rises.
@@ -650,7 +651,7 @@ function SolutionPanel({ incident }: { incident: Incident }) {
               value={rcEdit}
               onChange={(e) => setRcEdit(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 text-xs bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+              className="w-full px-3 py-2 text-xs bg-app-bg border border-app-border rounded-lg focus:outline-none focus:border-gray-400"
             />
             <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">
               Fix steps (one per line)
@@ -659,7 +660,7 @@ function SolutionPanel({ incident }: { incident: Incident }) {
               value={stepsEdit}
               onChange={(e) => setStepsEdit(e.target.value)}
               rows={5}
-              className="w-full px-3 py-2 text-xs bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+              className="w-full px-3 py-2 text-xs bg-app-bg border border-app-border rounded-lg focus:outline-none focus:border-gray-400"
             />
             <button
               onClick={handleRefine}
@@ -677,8 +678,8 @@ function SolutionPanel({ incident }: { incident: Incident }) {
         )}
 
         {showIngest && (
-          <div className="space-y-2 border-t border-gray-100 pt-3">
-            <p className="text-[11px] text-[#6B7280]">
+          <div className="space-y-2 border-t border-app-border pt-3">
+            <p className="text-[11px] text-app-secondary">
               After a human merges the fix, paste the PR details so the agent
               learns it. The same error becomes auto-fixable next time.
             </p>
@@ -686,14 +687,14 @@ function SolutionPanel({ incident }: { incident: Incident }) {
               value={prUrl}
               onChange={(e) => setPrUrl(e.target.value)}
               placeholder="Merged PR URL"
-              className="w-full px-3 py-2 text-xs bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+              className="w-full px-3 py-2 text-xs bg-app-bg border border-app-border rounded-lg focus:outline-none focus:border-gray-400"
             />
             <textarea
               value={diff}
               onChange={(e) => setDiff(e.target.value)}
               placeholder="Paste the unified diff of the merged change…"
               rows={5}
-              className="w-full px-3 py-2 text-xs font-mono bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-gray-400"
+              className="w-full px-3 py-2 text-xs font-mono bg-app-bg border border-app-border rounded-lg focus:outline-none focus:border-gray-400"
             />
             <button
               onClick={handleIngest}
@@ -711,7 +712,7 @@ function SolutionPanel({ incident }: { incident: Incident }) {
         )}
 
         {msg && (
-          <div className="text-[11px] text-gray-700 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 break-all">
+          <div className="text-[11px] text-app-secondary bg-app-surface border border-app-border rounded-lg px-3 py-2 break-all">
             {msg}
           </div>
         )}
@@ -766,9 +767,9 @@ function JourneyTimeline({ incidentId }: JourneyTimelineProps) {
 
   if (loading && events.length === 0) {
     return (
-      <div className="mt-6 p-6 bg-white border border-[#E5E7EB] rounded-2xl shadow-sm text-center">
+      <div className="mt-6 p-6 bg-app-surface border border-app-border rounded-2xl shadow-sm text-center">
         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900 mx-auto"></div>
-        <p className="text-xs text-[#6B7280] mt-2">
+        <p className="text-xs text-app-secondary mt-2">
           Loading incident event journey...
         </p>
       </div>
@@ -786,93 +787,93 @@ function JourneyTimeline({ incidentId }: JourneyTimelineProps) {
         return {
           title: "Pipeline Failure Detected",
           icon: ShieldAlert,
-          bg: "bg-rose-50 border-rose-200 text-rose-700",
-          iconBg: "bg-rose-100 text-rose-700",
+          bg: "bg-app-surface border border-rose-500/30 border-rose-500/30 text-rose-400",
+          iconBg: "bg-rose-500/20 text-rose-400",
         };
       case "INITIAL_MAIL_SENT":
         return {
           title: "Initial Alert Dispatched (L1)",
           icon: Mail,
-          bg: "bg-blue-50/50 border-blue-200 text-blue-700",
-          iconBg: "bg-blue-100 text-blue-700",
+          bg: "bg-app-surface border-app-border text-app-secondary",
+          iconBg: "bg-app-surface text-app-secondary",
         };
       case "ESCALATION_CHECK":
         return {
           title: "SLA Check Performed",
           icon: Clock,
-          bg: "bg-slate-50 border-slate-200 text-slate-700",
-          iconBg: "bg-slate-100 text-slate-700",
+          bg: "bg-app-surface border-app-border text-app-primary",
+          iconBg: "bg-app-surface text-app-primary",
         };
       case "ESCALATION_MAIL_SENT":
         return {
           title: "Incident Escalated (L1+L2+L3)",
           icon: AlertTriangle,
-          bg: "bg-amber-50 border-amber-200 text-amber-700",
-          iconBg: "bg-amber-100 text-amber-700",
+          bg: "bg-app-surface border border-amber-500/30 border-amber-500/30 text-amber-400",
+          iconBg: "bg-app-surface border border-amber-500/30 text-amber-400",
         };
       case "RERUN_DETECTED":
         return {
           title: "Pipeline Rerun Detected",
           icon: RefreshCw,
-          bg: "bg-violet-50 border-violet-200 text-violet-700",
-          iconBg: "bg-violet-100 text-violet-700",
+          bg: "bg-app-surface border border-violet-500/30 border-violet-500/30 text-violet-400",
+          iconBg: "bg-violet-500/20 text-violet-400",
         };
       case "RERUN_SUCCEEDED":
         return {
           title: "Rerun Succeeded",
           icon: CheckCircle2,
-          bg: "bg-emerald-50 border-emerald-200 text-emerald-700",
-          iconBg: "bg-emerald-100 text-emerald-700",
+          bg: "bg-app-surface border border-emerald-500/30 border-emerald-500/30 text-emerald-400",
+          iconBg: "bg-app-surface border border-emerald-500/30 text-emerald-400",
         };
       case "RERUN_FAILED":
         return {
           title: "Rerun Failed",
           icon: X,
-          bg: "bg-rose-50 border-rose-200 text-rose-700",
-          iconBg: "bg-rose-100 text-rose-700",
+          bg: "bg-app-surface border border-rose-500/30 border-rose-500/30 text-rose-400",
+          iconBg: "bg-rose-500/20 text-rose-400",
         };
       case "RESOLVED":
         return {
           title: "Incident Resolved",
           icon: Check,
-          bg: "bg-emerald-50 border-emerald-200 text-emerald-700",
-          iconBg: "bg-emerald-100 text-emerald-700",
+          bg: "bg-app-surface border border-emerald-500/30 border-emerald-500/30 text-emerald-400",
+          iconBg: "bg-app-surface border border-emerald-500/30 text-emerald-400",
         };
       case "JIRA_TICKET_CREATED":
         return {
           title: "Jira Ticket Created",
           icon: Ticket,
-          bg: "bg-blue-50 border-blue-200 text-blue-700",
-          iconBg: "bg-blue-100 text-blue-700",
+          bg: "bg-app-surface border-app-border text-app-secondary",
+          iconBg: "bg-app-surface text-app-secondary",
         };
       default:
         return {
           title: type.replace(/_/g, " "),
           icon: Activity,
-          bg: "bg-gray-50 border-gray-200 text-gray-700",
-          iconBg: "bg-gray-100 text-gray-700",
+          bg: "bg-app-surface border-app-border text-app-secondary",
+          iconBg: "bg-app-surface border border-app-border text-app-secondary",
         };
     }
   };
 
   return (
-    <div className="mt-6 border border-[#E5E7EB] bg-white rounded-2xl p-6 shadow-sm">
-      <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-4 mb-6">
+    <div className="mt-6 border border-app-border bg-app-surface rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center justify-between border-b border-app-border pb-4 mb-6">
         <div>
-          <h3 className="text-base font-bold text-[#111827]">
+          <h3 className="text-base font-bold text-app-primary">
             Incident Lifecycle Journey
           </h3>
-          <p className="text-xs text-[#6B7280]">
+          <p className="text-xs text-app-secondary">
             Autonomous incident detection, check intervals, and team escalation
             logs
           </p>
         </div>
-        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded bg-slate-100 text-slate-700">
+        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded bg-app-surface text-app-primary">
           JOURNEY LOG
         </span>
       </div>
 
-      <div className="relative border-l-2 border-[#E5E7EB] ml-4 pl-6 space-y-8">
+      <div className="relative border-l-2 border-app-border ml-4 pl-6 space-y-8">
         {events.map((evt, idx) => {
           const cfg = getEventConfig(evt.event_type);
           const Icon = cfg.icon;
@@ -888,7 +889,7 @@ function JourneyTimeline({ incidentId }: JourneyTimelineProps) {
               {/* Timeline marker icon */}
               <span
                 className={cn(
-                  "absolute -left-[37px] top-0.5 rounded-full p-1.5 border-2 border-white shadow-sm flex items-center justify-center",
+                  "absolute -left-[37px] top-0.5 rounded-full p-1.5 border-2 border-app-bg shadow-sm flex items-center justify-center",
                   cfg.iconBg,
                 )}
               >
@@ -896,37 +897,37 @@ function JourneyTimeline({ incidentId }: JourneyTimelineProps) {
               </span>
 
               {/* Event Card */}
-              <div className={cn("border rounded-xl p-4 shadow-sm bg-white")}>
+              <div className={cn("border border-app-border rounded-xl p-4 shadow-sm bg-app-surface")}>
                 <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-[#111827]">
+                    <span className="font-bold text-sm text-app-primary">
                       {cfg.title}
                     </span>
                     {evt.escalation_level && (
-                      <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded">
+                      <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-app-surface border border-amber-500/30 text-amber-400 rounded">
                         Level: {evt.escalation_level}
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] text-[#9CA3AF] font-mono">
+                  <span className="text-[10px] text-app-secondary font-mono">
                     {formatDateTime(evt.created_at)}
                   </span>
                 </div>
 
-                <p className="text-xs text-[#4B5563] leading-relaxed">
+                <p className="text-xs text-app-secondary leading-relaxed">
                   {evt.details}
                 </p>
 
                 {/* Recipient details display */}
                 {Array.isArray(evt.recipients) && evt.recipients.length > 0 && (
-                  <div className="mt-3 bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+                  <div className="mt-3 bg-app-input border border-app-border rounded-lg p-3 shadow-inner">
                     {(() => {
                       const splitRecipients = evt.recipients.flatMap(r => 
                         (r.email || "").split(",").map(e => ({ email: e.trim(), role: r.role })).filter(x => x.email)
                       );
                       return (
                         <>
-                          <div className="text-[9px] font-bold uppercase tracking-wider text-[#9CA3AF] mb-1.5 flex items-center gap-1">
+                          <div className="text-[9px] font-bold uppercase tracking-wider text-app-secondary mb-1.5 flex items-center gap-1">
                             <Users className="w-3 h-3" /> Notified Recipients (
                             {splitRecipients.length})
                           </div>
@@ -934,17 +935,17 @@ function JourneyTimeline({ incidentId }: JourneyTimelineProps) {
                             {splitRecipients.map((r, i) => (
                               <div
                                 key={i}
-                                className="bg-white border border-gray-200 rounded px-2 py-1 flex items-center justify-between"
+                                className="bg-app-surface border border-app-border rounded-md px-2.5 py-1.5 flex items-center justify-between"
                               >
                                 <div className="truncate pr-2">
-                                  <div className="text-[10px] font-semibold text-[#111827] truncate">
+                                  <div className="text-[10px] font-semibold text-app-primary truncate">
                                     {r.email}
                                   </div>
-                                  <div className="text-[9px] text-[#6B7280] font-medium">
+                                  <div className="text-[9px] text-app-secondary font-medium">
                                     {r.role}
                                   </div>
                                 </div>
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
                               </div>
                             ))}
                           </div>
@@ -955,9 +956,9 @@ function JourneyTimeline({ incidentId }: JourneyTimelineProps) {
                 )}
 
                 {evt.related_run_id && (
-                  <div className="mt-2 text-[10px] text-[#6B7280] font-medium">
+                  <div className="mt-2 text-[10px] text-app-secondary font-medium">
                     Related Run ID:{" "}
-                    <span className="font-mono text-gray-900 bg-gray-100 px-1 py-0.5 rounded">
+                    <span className="font-mono text-app-primary bg-app-surface border border-app-border px-1 py-0.5 rounded">
                       #{evt.related_run_id}
                     </span>
                   </div>

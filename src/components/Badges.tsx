@@ -4,10 +4,10 @@ import type { IncidentStatus, RiskTier, PipelineStatus } from '../types';
 export function RiskBadge({ tier, size = 'sm' }: { tier: RiskTier; size?: 'sm' | 'md' }) {
   const styles =
     tier === 'High'
-      ? 'bg-red-50 text-red-700 border-red-100'
+      ? 'bg-app-surface text-rose-400 border-rose-500/30'
       : tier === 'Medium'
-        ? 'bg-amber-50 text-amber-700 border-amber-100'
-        : 'bg-blue-50 text-blue-700 border-blue-100';
+        ? 'bg-app-surface text-amber-400 border-amber-500/30'
+        : 'bg-app-surface text-sky-400 border-sky-500/30';
   return (
     <span
       className={cn(
@@ -22,16 +22,16 @@ export function RiskBadge({ tier, size = 'sm' }: { tier: RiskTier; size?: 'sm' |
 }
 
 const STATUS_STYLES: Record<IncidentStatus, string> = {
-  Detected: 'bg-red-50 text-red-700 border-red-100',
-  Reasoning: 'bg-purple-50 text-purple-700 border-purple-100',
-  Planning: 'bg-amber-50 text-amber-700 border-amber-100',
-  'Awaiting Approval': 'bg-amber-50 text-amber-700 border-amber-100',
-  Processing: 'bg-blue-50 text-blue-700 border-blue-100',
-  Executing: 'bg-blue-50 text-blue-700 border-blue-100',
-  Evaluating: 'bg-blue-50 text-blue-700 border-blue-100',
-  Remediated: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  Failed: 'bg-red-50 text-red-700 border-red-100',
-  Escalated: 'bg-red-50 text-red-700 border-red-100',
+  Detected: 'bg-app-surface text-rose-400 border-rose-500/30',
+  Reasoning: 'bg-app-surface text-violet-400 border-violet-500/30',
+  Planning: 'bg-app-surface text-amber-400 border-amber-500/30',
+  'Awaiting Approval': 'bg-app-surface text-amber-400 border-amber-500/30',
+  Processing: 'bg-app-surface text-sky-400 border-sky-500/30',
+  Executing: 'bg-app-surface text-sky-400 border-sky-500/30',
+  Evaluating: 'bg-app-surface text-sky-400 border-sky-500/30',
+  Remediated: 'bg-app-surface text-emerald-400 border-emerald-500/30',
+  Failed: 'bg-app-surface text-rose-400 border-rose-500/30',
+  Escalated: 'bg-app-surface text-rose-400 border-rose-500/30',
 };
 
 export function StatusBadge({
@@ -69,12 +69,12 @@ export function PipelineStatusBadge({ status }: { status?: string }) {
   const s = (status || 'unknown').toLowerCase();
   const styles =
     s === 'healthy' || s === 'succeeded'
-      ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+      ? 'bg-app-surface text-emerald-400 border-emerald-500/30'
       : s === 'degraded'
-        ? 'bg-amber-50 text-amber-700 border-amber-100'
+        ? 'bg-app-surface text-amber-400 border-amber-500/30'
         : (s === 'unhealthy' || s === 'failed')
-          ? 'bg-red-50 text-red-700 border-red-100'
-          : 'bg-gray-50 text-gray-700 border-gray-100';
+          ? 'bg-app-surface text-rose-400 border-rose-500/30'
+          : 'bg-app-surface text-app-secondary border-app-border';
           
   return (
     <span

@@ -1,13 +1,107 @@
-import { Activity, Brain, Settings, Zap, Plus } from 'lucide-react';
+import React, { ReactNode } from 'react';
+import { Moon, Sun, Activity, Brain, Settings, Zap, Plus, LogOut, Monitor, Check } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { cn } from '../lib/utils';
-import type { ReactNode } from 'react';
+import { auth } from '../services/api';
 
 interface Props {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   onConnect?: () => void;
+}
+
+function UserMenu() {
+  const [showMenu, setShowMenu] = React.useState(false);
+  const [theme, setTheme] = React.useState<'light' | 'dark' | 'system'>(() => {
+    return (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system';
+  });
+
+  React.useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'system') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (isDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+      localStorage.removeItem('theme');
+    } else if (theme === 'dark') {
+      root.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [theme]);
+
+  const isDarkCurrent = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowMenu(!showMenu)}
+        className={cn(
+          "p-2 rounded-xl transition-colors",
+          showMenu ? "bg-rose-50 text-rose-500 border border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20" : "bg-app-surface border border-app-border hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 dark:hover:bg-rose-500/10 dark:hover:border-rose-500/20 text-app-secondary"
+        )}
+      >
+        {isDarkCurrent ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+      </button>
+
+      {showMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+          <div className="absolute right-0 top-full mt-2 w-48 bg-app-surface border border-app-border rounded-xl shadow-lg py-1.5 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+            <button
+              onClick={() => { setTheme('light'); setShowMenu(false); }}
+              className="w-full flex items-center justify-between px-4 py-2 text-[13px] font-medium text-app-primary hover:bg-app-bg transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Sun className="w-4 h-4 text-app-secondary" />
+                <span>Light</span>
+              </div>
+              {theme === 'light' && <Check className="w-3.5 h-3.5 text-app-brand" />}
+            </button>
+            <button
+              onClick={() => { setTheme('dark'); setShowMenu(false); }}
+              className="w-full flex items-center justify-between px-4 py-2 text-[13px] font-medium text-app-primary hover:bg-app-bg transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Moon className="w-4 h-4 text-app-secondary" />
+                <span>Dark</span>
+              </div>
+              {theme === 'dark' && <Check className="w-3.5 h-3.5 text-app-brand" />}
+            </button>
+            <button
+              onClick={() => { setTheme('system'); setShowMenu(false); }}
+              className="w-full flex items-center justify-between px-4 py-2 text-[13px] font-medium text-app-primary hover:bg-app-bg transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Monitor className="w-4 h-4 text-app-secondary" />
+                <span>System</span>
+              </div>
+              {theme === 'system' && <Check className="w-3.5 h-3.5 text-app-brand" />}
+            </button>
+            
+            <div className="h-px bg-app-border my-1.5" />
+            
+            <button
+              onClick={() => {
+                auth.clearToken();
+                window.location.href = "/";
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2 text-[13px] font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors text-left"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function Header({ title, subtitle, actions, onConnect }: Props) {
@@ -17,24 +111,22 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
   const unhealthy = state.pipelines.filter((p) => p.status !== 'healthy').length;
 
   return (
-    <header className="h-20 border-b border-[#E5E7EB] bg-white flex items-center justify-between z-10 shrink-0 px-6">
+    <header className="h-20 border-b border-app-border bg-app-surface flex items-center justify-between relative z-50 shrink-0 px-6">
       <div className="flex items-center gap-6 min-w-0 h-full">
-        {/* Logo Section */}
-        <div className="flex items-center gap-3 pr-6 border-r border-[#E5E7EB] h-10">
-          <div className="w-9 h-9 rounded-md bg-[#111827] flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-3 pr-6 border-r border-app-border h-10">
+          <div className="w-9 h-9 rounded-md bg-app-brand flex items-center justify-center shrink-0">
             <Zap className="w-5 h-5 text-white" fill="currentColor" />
           </div>
           <div className="flex flex-col leading-none whitespace-nowrap">
             <span className="font-semibold tracking-tight text-[15px]">
               AGENTIC<span className="text-gray-400">OPS</span>
             </span>
-            <span className="text-[9px] uppercase tracking-[0.18em] text-[#9CA3AF] mt-1 font-bold">
+            <span className="text-[9px] uppercase tracking-[0.18em] text-app-brand mt-1 font-bold">
               Autonomous DataOps
             </span>
           </div>
         </div>
 
-        {/* Title Section */}
         <div className="min-w-0">
           <h1 className="text-xl font-medium tracking-tight truncate">{title}</h1>
           {subtitle && (
@@ -44,7 +136,6 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
           )}
         </div>
 
-        {/* Stats Section */}
         <div className="h-6 w-px bg-[#E5E7EB] hidden lg:block mx-2" />
         <div className="hidden lg:flex items-center gap-6">
           <Stat 
@@ -53,7 +144,7 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
             value={`${activePipelines}`} 
           />
           <Stat
-            icon={<Brain className={cn('w-3.5 h-3.5', activeAgents > 0 ? 'text-blue-500' : 'text-[#9CA3AF]')} />}
+            icon={<Brain className={cn('w-3.5 h-3.5', activeAgents > 0 ? 'text-app-brand' : 'text-app-secondary')} />}
             label="Agents"
             value={activeAgents > 0 ? `${activeAgents} thinking` : 'Idle'}
           />
@@ -75,9 +166,9 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
       <div className="flex items-center gap-3">
         <button 
           onClick={onConnect}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E5E7EB] hover:bg-gray-50 text-[10px] font-bold uppercase tracking-[0.18em] rounded transition-all shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-app-surface border border-app-border hover:bg-app-bg text-[10px] font-bold uppercase tracking-[0.18em] rounded transition-all shadow-sm"
         >
-          <Plus className="w-3 h-3 text-[#6B7280]" />
+          <Plus className="w-3 h-3 text-app-brand" />
           Connect Source
         </button>
 
@@ -104,9 +195,7 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
             {state.connected ? 'Cluster Stable' : 'Reconnecting'}
           </span>
         </div>
-        <button className="p-2 rounded hover:bg-gray-100 text-[#6B7280] transition-colors">
-          <Settings className="w-5 h-5" />
-        </button>
+        <UserMenu />
       </div>
     </header>
   );

@@ -2,9 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
+  BookOpen,
   Brain,
   ChevronDown,
   ChevronRight,
+  History,
   RefreshCw,
   RotateCw,
   Sparkles,
@@ -1165,6 +1167,96 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             </ul>
           </div>
         )}
+
+        {/* ── Knowledge Base References ───────────────────────────────────── */}
+        {(() => {
+          const raw = analysis.raw_response || {};
+          const refs: Array<{
+            kind: string;
+            title: string;
+            similarity: number;
+            risk_tier?: string;
+            incident_id?: string;
+            source?: string;
+          }> = Array.isArray(raw.kb_references) ? raw.kb_references : [];
+          if (refs.length === 0) return null;
+          return (
+            <div className="pt-6 border-t border-app-border">
+              <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <BookOpen size={12} className="text-blue-500" />
+                Knowledge Base References
+              </div>
+              <div className="space-y-2">
+                {refs.map((ref, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-app-surface border border-app-border/60 hover:border-blue-500/40 transition-colors"
+                  >
+                    <div className="shrink-0 mt-0.5">
+                      {ref.kind === "runbook" ? (
+                        <BookOpen size={14} className="text-blue-500" />
+                      ) : (
+                        <History size={14} className="text-amber-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-app-primary truncate">
+                          {ref.title}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded",
+                            ref.kind === "runbook"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
+                              : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+                          )}
+                        >
+                          {ref.kind === "runbook" ? "Runbook" : "Past Incident"}
+                        </span>
+                        {ref.risk_tier && (
+                          <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
+                            {ref.risk_tier} Risk
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[10px] text-app-secondary">
+                          {Math.round(ref.similarity * 100)}% similarity
+                        </span>
+                        {ref.source && (
+                          <span className="text-[10px] text-app-secondary truncate">
+                            {ref.source}
+                          </span>
+                        )}
+                        {ref.incident_id && (
+                          <span className="text-[10px] text-app-secondary font-mono">
+                            #{ref.incident_id}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex flex-col items-end gap-1">
+                      <div className="w-16 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            ref.similarity >= 0.8
+                              ? "bg-emerald-500"
+                              : ref.similarity >= 0.6
+                                ? "bg-amber-500"
+                                : "bg-rose-400",
+                          )}
+                          style={{ width: `${Math.round(ref.similarity * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {analysis.fix_patch && (
           <div>

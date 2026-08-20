@@ -8,15 +8,16 @@ interface Props {
   icon: LucideIcon;
   pipelines: Pipeline[];
   empty: string;
-  accent: 'rose' | 'cyan' | 'lime';
+  accent?: 'rose' | 'cyan' | 'lime' | 'pwc';
 }
 
-export function PipelineList({ title, icon: Icon, pipelines, empty, accent }: Props) {
+export function PipelineList({ title, icon: Icon, pipelines, empty, accent = 'cyan' }: Props) {
   const accentColor = {
     rose: 'text-red-500',
     cyan: 'text-app-brand',
     lime: 'text-emerald-500',
-  }[accent];
+    pwc: 'text-app-brand',
+  }[accent || 'cyan'];
 
   return (
     <div className="bg-app-surface border border-app-border rounded-lg overflow-hidden flex flex-col">
@@ -25,13 +26,13 @@ export function PipelineList({ title, icon: Icon, pipelines, empty, accent }: Pr
           <Icon size={16} className={accentColor} />
           <h4 className="text-sm font-semibold text-app-primary">{title}</h4>
         </div>
-        <Link to="/app/pipelines" className="text-[10px] uppercase font-bold tracking-wider text-[#9CA3AF] hover:text-app-primary flex items-center gap-1 transition-colors">
+        <Link to="/app/pipelines" className="text-[10px] uppercase font-bold tracking-wider text-app-secondary hover:text-app-primary flex items-center gap-1 transition-colors">
           all pipelines <ArrowRight size={10} />
         </Link>
       </div>
-      <div className="flex-1 divide-y divide-[#F3F4F6]">
+      <div className="flex-1 divide-y divide-app-border">
         {pipelines.length === 0 ? (
-          <div className="py-10 text-center text-xs text-[#9CA3AF] italic">{empty}</div>
+          <div className="py-10 text-center text-xs text-app-secondary italic">{empty}</div>
         ) : (
           pipelines.map((p) => (
             <Link 
@@ -41,7 +42,7 @@ export function PipelineList({ title, icon: Icon, pipelines, empty, accent }: Pr
             >
               <div>
                 <h5 className="text-sm font-medium text-app-primary group-hover:text-app-brand transition-colors">{p.name}</h5>
-                <p className="text-[10px] text-[#9CA3AF] mt-0.5">last run {p.last_run}</p>
+                <p className="text-[10px] text-app-secondary mt-0.5">last run {p.last_run}</p>
               </div>
               <PipelineStatusBadge status={p.last_run_status || p.status} />
             </Link>

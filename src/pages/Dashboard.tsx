@@ -373,14 +373,14 @@ export function DashboardPage() {
                 icon={AlertTriangle}
                 pipelines={failedPipelines}
                 empty="No failures — systems stable."
-                accent="pwc"
+                accent="rose"
               />
               <PipelineList
                 title="Currently Active"
                 icon={Activity}
                 pipelines={runningPipelines}
                 empty="No active jobs running."
-                accent="pwc"
+                accent="cyan"
               />
             </div>
           </div>

@@ -648,8 +648,7 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
                             <CheckCircle2
                               size={12}
                               className="text-emerald-500 mt-0.5 shrink-0"
-                            />
-                            <span className="text-xs text-app-secondary leading-snug">
+                            />                            <span className="text-xs text-app-secondary leading-snug">
                               {renderValue(step)}
                             </span>
                           </div>
@@ -729,23 +728,115 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
       }
     | undefined;
 
+  const cleanItemText = (val: any): string => {
+    if (!val) return "";
+    if (typeof val === "object") {
+      return String(val.action || val.description || val.title || val.step_description || val.text || JSON.stringify(val));
+    }
+    let s = String(val).trim();
+    if (s.startsWith("{") && (s.includes("'action':") || s.includes('"action":') || s.includes("'description':") || s.includes('"description":'))) {
+      try {
+        const m = s.match(/['"](?:action|description|title|step_description|text)['"]\s*:\s*['"](.*?)['"]/);
+        if (m && m[1]) return m[1];
+      } catch {
+        // ignore
+      }
+    }
+    return s.replace(/^[\s•→✓✓\-–—]+/, "").replace(/^\d+\.\s*/, "").trim();
+  };
+
   const rcDetails: string[] = Array.isArray(raw.root_cause_details)
-    ? raw.root_cause_details
+    ? raw.root_cause_details.map(cleanItemText).filter(Boolean)
     : [];
   const validation: string[] = Array.isArray(raw.validation_steps)
-    ? raw.validation_steps
+    ? raw.validation_steps.map(cleanItemText).filter(Boolean)
     : [];
   const classification = raw.classification as
-    | { is_known?: boolean; error_type?: string; reason?: string }
+    | { is_known?: boolean; error_type?: string; reason?: string; matched_historical_incidents?: number }
     | undefined;
 
   // New Industry-Standard RCA fields
   const errorDetails = raw.error_details || "";
-  const contributingFactors = raw.contributing_factors || [];
+  const contributingFactors = (Array.isArray(raw.contributing_factors) ? raw.contributing_factors : []).map(cleanItemText).filter(Boolean);
   const failureMechanism = raw.failure_mechanism || "";
   const impact = raw.impact || "";
   const longTermPrevention = raw.long_term_prevention || "";
-  const recommendedActions = raw.recommended_actions || [];
+  const recommendedActions = (Array.isArray(raw.recommended_actions) ? raw.recommended_actions : []).map(cleanItemText).filter(Boolean);
+
+  const immediateFixes: {
+    step: number;
+    title: string;
+    action: string;
+    priority: "REQUIRED" | "OPTIONAL" | string;
+    expected_outcome?: string;
+    validation?: string;
+  }[] = (() => {
+    if (Array.isArray(raw.immediate_fix) && raw.immediate_fix.length > 0) {
+      return raw.immediate_fix.map((item: any, idx: number) => ({
+        step: Number(item.step || idx + 1),
+        title: String(item.title || `Step ${idx + 1}`),
+        action: String(item.action || item.description || ""),
+        priority: "REQUIRED",
+        expected_outcome: item.expected_outcome || undefined,
+        validation: item.validation || undefined,
+      }));
+    }
+    if (Array.isArray(raw.known_fix) && raw.known_fix.length > 0) {
+      return raw.known_fix
+        .filter((item: any) => String(item.priority || "").toUpperCase() === "REQUIRED" || !String(item.title || "").toLowerCase().includes("quarantine"))
+        .map((item: any, idx: number) => ({
+          step: idx + 1,
+          title: String(item.title || item.action || `Step ${idx + 1}`),
+          action: String(item.action || item.description || item.details || ""),
+          priority: "REQUIRED",
+          expected_outcome: item.expected_outcome || undefined,
+          validation: item.validation || undefined,
+        }));
+    }
+    return [];
+  })();
+
+  const optionalImprovements: {
+    step: number;
+    title: string;
+    action: string;
+    priority: "REQUIRED" | "OPTIONAL" | string;
+    expected_outcome?: string;
+    validation?: string;
+  }[] = (() => {
+    if (Array.isArray(raw.optional_improvements) && raw.optional_improvements.length > 0) {
+      return raw.optional_improvements.map((item: any, idx: number) => ({
+        step: Number(item.step || idx + 1),
+        title: String(item.title || `Improvement ${idx + 1}`),
+        action: String(item.action || item.description || ""),
+        priority: "OPTIONAL",
+        expected_outcome: item.expected_outcome || undefined,
+        validation: item.validation || undefined,
+      }));
+    }
+    if (Array.isArray(raw.known_fix) && raw.known_fix.length > 0) {
+      return raw.known_fix
+        .filter((item: any) => String(item.priority || "").toUpperCase() === "OPTIONAL" || String(item.title || "").toLowerCase().includes("quarantine"))
+        .map((item: any, idx: number) => ({
+          step: idx + 1,
+          title: String(item.title || item.action || `Improvement ${idx + 1}`),
+          action: String(item.action || item.description || item.details || ""),
+          priority: "OPTIONAL",
+          expected_outcome: item.expected_outcome || undefined,
+          validation: item.validation || undefined,
+        }));
+    }
+    return [];
+  })();
+
+  const isDiagnosisFailed =
+    raw.diagnosis_status === "failed" ||
+    raw.diagnosis_status === "parse_failed" ||
+    analysis.summary === "AI diagnosis temporarily unavailable" ||
+    analysis.summary === "AI diagnosis response could not be structured" ||
+    analysis.summary === "Could not parse LLM response" ||
+    analysis.summary === "LLM call failed";
+  const diagnosisError = raw.diagnosis_error || raw.error || "";
 
   return (
     <div className="bg-app-surface border border-app-border/50 rounded-xl shadow-sm relative overflow-hidden">
@@ -783,26 +874,30 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             <div
               className={cn(
                 "h-full transition-all duration-500",
-                confidence >= 0.7
-                  ? "bg-emerald-500"
-                  : confidence >= 0.4
-                    ? "bg-amber-500"
-                    : "bg-rose-500",
+                isDiagnosisFailed
+                  ? "bg-gray-400"
+                  : confidence >= 0.7
+                    ? "bg-emerald-500"
+                    : confidence >= 0.4
+                      ? "bg-amber-500"
+                      : "bg-rose-500",
               )}
-              style={{ width: `${confidence * 100}%` }}
+              style={{ width: `${isDiagnosisFailed ? 0 : confidence * 100}%` }}
             />
           </div>
           <span
             className={cn(
               "text-xs font-bold font-mono",
-              confidence >= 0.7
-                ? "text-emerald-600 dark:text-emerald-400"
-                : confidence >= 0.4
-                  ? "text-amber-600 dark:text-amber-400"
-                  : "text-rose-600 dark:text-rose-400",
+              isDiagnosisFailed
+                ? "text-gray-400"
+                : confidence >= 0.7
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : confidence >= 0.4
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-rose-600 dark:text-rose-400",
             )}
           >
-            {Math.round(confidence * 100)}%
+            {isDiagnosisFailed ? "Unavailable (0%)" : `${Math.round(confidence * 100)}%`}
           </span>
           {explain && (
             <button
@@ -816,28 +911,69 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
       </div>
 
       <div className="p-6 space-y-6">
-        {/* Classification + confidence explanation */}
-        {(classification || explain) && (
-          <div className="space-y-3">
-            {classification && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={cn(
-                    "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded",
-                    classification.is_known
-                      ? "bg-app-input text-emerald-400 border border-emerald-500/30"
-                      : "bg-app-input text-amber-400 border border-amber-500/30",
-                  )}
-                >
-                  {classification.is_known ? "Known error" : "New error type"}
-                </span>
-                {classification.error_type && (
-                  <span className="text-[10px] font-bold px-2 py-1 rounded bg-app-input text-app-secondary border border-app-border/50">
-                    {classification.error_type}
-                  </span>
-                )}
+        {/* Temporary Diagnosis Failure Alert */}
+        {isDiagnosisFailed && (
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start gap-3">
+            <AlertTriangle className="text-amber-400 mt-0.5 shrink-0" size={18} />
+            <div className="space-y-1 text-xs leading-relaxed">
+              <div className="font-bold text-amber-300 uppercase tracking-wider text-[11px]">
+                {raw.diagnosis_status === "parse_failed"
+                  ? "Structured Diagnosis Parse Failed"
+                  : "AI Diagnosis Temporarily Unavailable"}
               </div>
-            )}
+              <p className="text-app-primary">
+                {raw.diagnosis_status === "parse_failed"
+                  ? "The diagnosis model response could not be structured into the required JSON schema. Raw execution logs and pipeline metrics are preserved above."
+                  : diagnosisError.includes("503") || diagnosisError.includes("high demand")
+                    ? "The AI model service is currently experiencing high demand (HTTP 503). Execution logs and metrics are intact above, but automated root-cause synthesis could not complete."
+                    : diagnosisError || "The AI diagnosis service could not complete analysis due to a temporary service error."}
+              </p>
+              <p className="text-[11px] text-app-secondary pt-0.5">
+                Root cause could not be determined automatically. Click <strong>Re-analyze</strong> to retry, or switch to <strong>Cloud / Gemini</strong> mode for higher-capacity structured output.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Classification + confidence explanation */}
+        {(classification || explain || raw.diagnosis_status === "partial") && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {raw.diagnosis_status === "partial" && (
+                <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  Partial Diagnosis
+                </span>
+              )}
+              {classification && (
+                <>
+                  <span
+                    className={cn(
+                      "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded",
+                      classification.is_known
+                        ? "bg-app-input text-emerald-400 border border-emerald-500/30"
+                        : "bg-app-input text-amber-400 border border-amber-500/30",
+                    )}
+                  >
+                    {classification.is_known ? "Known Pattern" : "New Error Type"}
+                  </span>
+                  {classification.matched_historical_incidents ? (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                      Matched historical incidents: {classification.matched_historical_incidents}
+                    </span>
+                  ) : null}
+                  {classification.error_type && classification.error_type.toLowerCase() !== "unknown" ? (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-app-input text-app-secondary border border-app-border/50">
+                      Category: {classification.error_type}
+                    </span>
+                  ) : classification.is_known ? (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-app-input text-app-secondary border border-app-border/50">
+                      Category: Unclassified
+                    </span>
+                  ) : null}
+                </>
+              )}
+            </div>
 
             {explain && showWhy && (
               <div className="bg-app-input border border-app-border/50 rounded-xl p-4 space-y-3 shadow-inner">
@@ -905,9 +1041,70 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             Summary
           </div>
           <div className="text-sm text-app-primary leading-relaxed font-medium">
-            {analysis.summary}
+            {isDiagnosisFailed
+              ? "AI root-cause synthesis is temporarily unavailable. Pipeline failure logs and metadata are captured above."
+              : analysis.summary}
           </div>
         </div>
+
+        {/* Verified Execution Facts (Immutable Telemetry) Grid */}
+        {(raw.pipeline_name || raw.failed_stage || raw.error_code || raw.invalid_records !== undefined) && (
+          <div className="p-4 rounded-xl bg-app-input/40 border border-app-border/60 text-xs space-y-3">
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Verified Execution Facts (Immutable Telemetry)
+              </span>
+              <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                Deterministic
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div>
+                <div className="text-[10px] text-app-secondary">Pipeline</div>
+                <div className="font-mono font-bold text-app-primary truncate" title={raw.pipeline_name}>
+                  {raw.pipeline_name || "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] text-app-secondary">Failed Stage</div>
+                <div className="font-mono font-bold text-amber-400 truncate" title={raw.failed_stage}>
+                  {raw.failed_stage || "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] text-app-secondary">Error Code</div>
+                <div className="font-mono font-bold text-rose-400 truncate" title={raw.error_code}>
+                  {raw.error_code || "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] text-app-secondary">Failure Metric</div>
+                <div className="font-mono font-bold text-app-primary">
+                  {raw.invalid_records !== undefined && raw.total_records !== undefined
+                    ? `${raw.invalid_records}/${raw.total_records} unique (${Number(raw.invalid_percentage || 0).toFixed(1)}% vs ${Number(raw.allowed_threshold || 5).toFixed(1)}%)`
+                    : raw.allowed_threshold !== undefined
+                      ? `Threshold: ${raw.allowed_threshold}%`
+                      : "—"}
+                </div>
+              </div>
+            </div>
+
+            {/* Validation violation category breakdown */}
+            {raw.validation_failures && Object.keys(raw.validation_failures).length > 0 && (
+              <div className="pt-2.5 border-t border-app-border/40 text-[11px] text-app-secondary flex items-start gap-2 flex-wrap">
+                <span className="font-bold text-app-primary">
+                  Category Violations ({raw.validation_violations_total || 7} total):
+                </span>
+                {Object.entries(raw.validation_failures).map(([cat, cnt], i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-app-surface border border-app-border/50 text-app-primary font-mono text-[10px]">
+                    {cat.replace(/_/g, " ")}: <strong>{String(cnt)}</strong>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {errorDetails && (
           <div>
@@ -931,6 +1128,19 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         )}
 
         {(() => {
+          if (isDiagnosisFailed) {
+            return (
+              <div>
+                <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+                  Pipeline Root Cause
+                </div>
+                <div className="text-sm text-app-secondary italic bg-app-surface p-4 rounded-lg border border-app-border leading-relaxed">
+                  Not determinable because AI diagnosis did not complete. Review the execution logs above or re-run analysis.
+                </div>
+              </div>
+            );
+          }
+
           const structuredData = parseRootCause(analysis.root_cause);
           if (
             analysis.summary === "Could not parse LLM response" &&
@@ -1021,7 +1231,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Failure Mechanism
             </div>
-            <div className="text-sm text-app-primary whitespace-pre-wrap bg-rose-50 p-4 rounded-lg border border-rose-100 leading-relaxed">
+            <div className="text-sm text-app-primary whitespace-pre-wrap bg-rose-500/10 p-4 rounded-lg border border-rose-500/30 leading-relaxed">
               {failureMechanism
                 .split(/\*\*(.*?)\*\*/g)
                 .map((part: string, i: number) =>
@@ -1042,7 +1252,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Impact
             </div>
-            <div className="text-sm text-app-primary leading-relaxed">
+            <div className="text-sm text-app-primary whitespace-pre-wrap bg-amber-500/10 p-4 rounded-lg border border-amber-500/30 leading-relaxed">
               {impact.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
                 i % 2 === 1 ? (
                   <strong key={i} className="font-bold text-app-primary">
@@ -1056,81 +1266,186 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           </div>
         )}
 
-        {analysis.suggested_fix && (
+        {/* Immediate Fix (Required Actions) */}
+        {immediateFixes.length > 0 && (
           <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Immediate Fix
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+              <span>Immediate Fix ({immediateFixes.length} Required Recovery Actions)</span>
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                Required for Recovery
+              </span>
             </div>
-            <div className="text-sm text-app-primary whitespace-pre-wrap leading-relaxed italic border-l-4 border-emerald-500 pl-4 py-2">
-              {analysis.suggested_fix
-                .split(/\*\*(.*?)\*\*/g)
-                .map((part: string, i: number) =>
-                  i % 2 === 1 ? (
-                    <strong
-                      key={i}
-                      className="font-bold text-app-primary not-italic"
-                    >
-                      {part}
-                    </strong>
-                  ) : (
-                    part
-                  ),
-                )}
-            </div>
-          </div>
-        )}
-
-        {longTermPrevention && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Long-Term Prevention
-            </div>
-            <div className="text-sm text-app-primary leading-relaxed">
-              {longTermPrevention
-                .split(/\*\*(.*?)\*\*/g)
-                .map((part: string, i: number) =>
-                  i % 2 === 1 ? (
-                    <strong key={i} className="font-bold text-app-primary">
-                      {part}
-                    </strong>
-                  ) : (
-                    part
-                  ),
-                )}
-            </div>
-          </div>
-        )}
-
-        {recommendedActions.length > 0 && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Recommended Actions
-            </div>
-            <ul className="space-y-1.5">
-              {recommendedActions.map((v: string, i: number) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-app-primary"
+            <div className="space-y-3">
+              {immediateFixes.map((step, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 rounded-xl border text-sm leading-relaxed transition-all shadow-sm bg-emerald-500/5 border-emerald-500/30 border-l-4 border-l-emerald-500"
                 >
-                  <span className="mt-0.5 text-blue-500 shrink-0">→</span>
-                  <span className="leading-relaxed">
-                    {v
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className="w-5 h-5 rounded-full bg-app-input border border-app-border flex items-center justify-center text-[10px] font-bold text-app-primary shrink-0">
+                      {step.step || idx + 1}
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Required Immediate Action
+                    </span>
+                    <span className="font-bold text-app-primary text-sm">
+                      {step.title}
+                    </span>
+                  </div>
+
+                  <div className="text-app-primary whitespace-pre-wrap pl-7 text-xs sm:text-sm leading-relaxed">
+                    {step.action
                       .split(/\*\*(.*?)\*\*/g)
-                      .map((part: string, idx: number) =>
-                        idx % 2 === 1 ? (
-                          <strong
-                            key={idx}
-                            className="font-bold text-app-primary"
-                          >
+                      .map((part: string, i: number) =>
+                        i % 2 === 1 ? (
+                          <strong key={i} className="font-bold text-app-primary not-italic">
                             {part}
                           </strong>
                         ) : (
                           part
                         ),
                       )}
-                  </span>
-                </li>
+                  </div>
+
+                  {step.expected_outcome && (
+                    <div className="mt-2.5 ml-7 pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-emerald-400 font-medium">
+                      <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-emerald-400" />
+                      <div>
+                        <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Expected Outcome:</span>
+                        {step.expected_outcome}
+                      </div>
+                    </div>
+                  )}
+
+                  {step.validation && (
+                    <div className="mt-1.5 ml-7 flex items-start gap-2 text-xs text-sky-400 font-medium">
+                      <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Validation:</span>
+                      {step.validation}
+                    </div>
+                  )}
+                </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Optional Improvements (Runbook Recommendations) */}
+        {optionalImprovements.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+              <span>Optional Improvements ({optionalImprovements.length} Runbook Recommendations)</span>
+              <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">
+                Runbook Enhancement
+              </span>
+            </div>
+            <div className="space-y-3">
+              {optionalImprovements.map((step, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 rounded-xl border text-sm leading-relaxed transition-all shadow-sm bg-sky-500/5 border-sky-500/30 border-l-4 border-l-sky-500"
+                >
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className="w-5 h-5 rounded-full bg-app-input border border-app-border flex items-center justify-center text-[10px] font-bold text-app-primary shrink-0">
+                      {step.step || idx + 1}
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                      Optional Runbook Improvement
+                    </span>
+                    <span className="font-bold text-app-primary text-sm">
+                      {step.title}
+                    </span>
+                  </div>
+
+                  <div className="text-app-primary whitespace-pre-wrap pl-7 text-xs sm:text-sm leading-relaxed">
+                    {step.action}
+                  </div>
+
+                  {step.expected_outcome && (
+                    <div className="mt-2.5 ml-7 pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-sky-300 font-medium">
+                      <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-sky-400" />
+                      <div>
+                        <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Expected Outcome:</span>
+                        {step.expected_outcome}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Long-term prevention */}
+        {(() => {
+          const ltpList = Array.isArray(raw.long_term_prevention)
+            ? raw.long_term_prevention
+            : longTermPrevention
+              ? [longTermPrevention]
+              : [];
+
+          if (ltpList.length === 0) return null;
+
+          return (
+            <div>
+              <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+                Long-Term Prevention
+              </div>
+              <ul className="space-y-2 bg-sky-500/5 p-4 rounded-xl border border-sky-500/20">
+                {ltpList.map((item: string, i: number) => (
+                  <li key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-app-primary">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-2" />
+                    <span className="leading-relaxed">
+                      {String(item)
+                        .split(/\*\*(.*?)\*\*/g)
+                        .map((part: string, idx: number) =>
+                          idx % 2 === 1 ? (
+                            <strong key={idx} className="font-bold text-app-primary">
+                              {part}
+                            </strong>
+                          ) : (
+                            part
+                          ),
+                        )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })()}
+
+        {recommendedActions.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+              Recommended Operational Follow-ups
+            </div>
+            <ul className="space-y-2">
+              {recommendedActions.map((v: string, i: number) => {
+                const cleaned = v.replace(/^[\s•→\-–—]+/, "").trim();
+                return (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2.5 p-2.5 rounded-lg bg-app-surface/60 border border-app-border/40 text-sm text-app-primary"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      {i + 1}
+                    </div>
+                    <span className="leading-relaxed">
+                      {cleaned
+                        .split(/\*\*(.*?)\*\*/g)
+                        .map((part: string, idx: number) =>
+                          idx % 2 === 1 ? (
+                            <strong key={idx} className="font-bold text-app-primary">
+                              {part}
+                            </strong>
+                          ) : (
+                            part
+                          ),
+                        )}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -1140,31 +1455,31 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
               Validation Steps
             </div>
-            <ul className="space-y-1.5">
-              {validation.map((v: string, i: number) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-app-primary"
-                >
-                  <span className="mt-0.5 text-emerald-500 shrink-0">✓</span>
-                  <span className="leading-relaxed">
-                    {v
-                      .split(/\*\*(.*?)\*\*/g)
-                      .map((part: string, idx: number) =>
-                        idx % 2 === 1 ? (
-                          <strong
-                            key={idx}
-                            className="font-bold text-app-primary"
-                          >
-                            {part}
-                          </strong>
-                        ) : (
-                          part
-                        ),
-                      )}
-                  </span>
-                </li>
-              ))}
+            <ul className="space-y-2">
+              {validation.map((v: string, i: number) => {
+                const cleaned = v.replace(/^[\s•✓✓\-–—]+/, "").trim();
+                return (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-sm text-app-primary"
+                  >
+                    <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">
+                      {cleaned
+                        .split(/\*\*(.*?)\*\*/g)
+                        .map((part: string, idx: number) =>
+                          idx % 2 === 1 ? (
+                            <strong key={idx} className="font-bold text-app-primary">
+                              {part}
+                            </strong>
+                          ) : (
+                            part
+                          ),
+                        )}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -1172,7 +1487,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         {/* ── Knowledge Base References ───────────────────────────────────── */}
         {(() => {
           const raw = analysis.raw_response || {};
-          const refs: Array<{
+          const rawRefs: Array<{
             kind: string;
             title: string;
             similarity: number;
@@ -1180,12 +1495,24 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             incident_id?: string;
             source?: string;
           }> = Array.isArray(raw.kb_references) ? raw.kb_references : [];
+          
+          // Deduplicate refs
+          const seen = new Set<string>();
+          const refs = rawRefs.filter((r) => {
+            const key = `${r.kind}:${r.incident_id || r.title}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+
           if (refs.length === 0) return null;
           return (
             <div className="pt-6 border-t border-app-border">
               <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-3 flex items-center gap-1.5">
                 <BookOpen size={12} className="text-blue-500" />
-                Knowledge Base References
+                {isDiagnosisFailed
+                  ? "Historical Similar Incidents & Runbooks (Reference Only)"
+                  : "Knowledge Base References"}
               </div>
               <div className="space-y-2">
                 {refs.map((ref, i) => (

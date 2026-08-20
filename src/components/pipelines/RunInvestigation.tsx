@@ -19,6 +19,8 @@ import {
   Info,
   List,
   User,
+  Copy,
+  Check,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Header } from "../Header";
@@ -45,6 +47,8 @@ export function RunInvestigation({
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [logFilter, setLogFilter] = useState("ALL");
+  const [showPatch, setShowPatch] = useState(true);
+  const [copiedPatch, setCopiedPatch] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   const loadData = async () => {
@@ -369,25 +373,26 @@ function repairJson(jsonStr: string) {
 
 function parseRootCause(rootCause: string) {
   try {
-    if (!rootCause) return null;
+    if (!rootCause || typeof rootCause !== "string") return null;
 
-    // Extract JSON from markdown code block if present
-    // Handles ```json, ```JSON, or just ```
     let jsonStr = rootCause.trim();
+    // Only attempt JSON parsing if it actually looks like JSON/code block
     const match = jsonStr.match(/```(?:json)?\n?([\s\S]*?)```/i);
     if (match && match[1]) {
       jsonStr = match[1].trim();
     }
 
+    if (!jsonStr.startsWith("{") && !jsonStr.startsWith("[")) {
+      return null;
+    }
+
     try {
       return JSON.parse(jsonStr);
-    } catch (e) {
-      // If parsing fails, try to repair truncated JSON
+    } catch {
       const repaired = repairJson(jsonStr);
       return JSON.parse(repaired);
     }
-  } catch (e) {
-    console.error("Root cause parse failed:", e);
+  } catch {
     return null;
   }
 }
@@ -662,7 +667,7 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
       {/* Insight Footer */}
       {(data.additional_context?.potential_causes?.length > 0 ||
         data.additional_context?.impact ||
-        data.timestamp) && (
+          data.timestamp) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-app-border">
           <div>
             <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-3 flex items-center gap-1.5">
@@ -689,7 +694,7 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
             </div>
           </div>
           {data.additional_context?.impact && (
-            <div className="bg-app-surface border border-app-border/50 border border-app-border/50 rounded-2xl p-5">
+            <div className="bg-app-surface border border-app-border/50 rounded-2xl p-5">
               <div className="text-[10px] font-bold text-app-brand uppercase tracking-widest mb-2">
                 Business Impact Assessment
               </div>
@@ -705,8 +710,9 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
 }
 
 function AnalysisPanel({ analysis }: { analysis: any }) {
-  const [showPatch, setShowPatch] = useState(false);
+  const [showPatch, setShowPatch] = useState(true);
   const [showWhy, setShowWhy] = useState(false);
+  const [copiedPatch, setCopiedPatch] = useState(false);
   const confidence = analysis.confidence ?? 0;
 
   const raw = analysis.raw_response || {};
@@ -753,11 +759,6 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           <div>
             <div className="text-sm font-bold flex items-center gap-2">
               Agentic Ops Diagnosis
-              {/* {analysis.model && (
-                <span className="text-[9px] font-bold text-app-brand bg-app-surface border border-app-border px-1.5 py-0.5 rounded border border-app-border/50 uppercase tracking-widest">
-                  {analysis.model}
-                </span>
-              )} */}
             </div>
             <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mt-0.5">
               Generated{" "}
@@ -1259,42 +1260,46 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         })()}
 
         {analysis.fix_patch && (
-          <div>
-            <button
-              onClick={() => setShowPatch((v) => !v)}
-              className="flex items-center gap-2 text-[10px] font-bold text-app-brand uppercase tracking-widest hover:text-blue-700 transition-all mb-2"
-            >
-              {showPatch ? (
-                <ChevronDown size={14} />
-              ) : (
-                <ChevronRight size={14} />
-              )}
-              Proposed Code Patch
-            </button>
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setShowPatch((v) => !v)}
+                className="flex items-center gap-2 text-[10px] font-bold text-app-brand uppercase tracking-widest hover:text-orange-500 transition-all"
+              >
+                {showPatch ? (
+                  <ChevronDown size={14} />
+                ) : (
+                  <ChevronRight size={14} />
+                )}
+                Proposed Code Patch
+              </button>
+              <button
+                onClick={() => {
+                  if (!analysis?.fix_patch) return;
+                  navigator.clipboard.writeText(analysis.fix_patch);
+                  setCopiedPatch(true);
+                  setTimeout(() => setCopiedPatch(false), 2000);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-app-surface border border-app-border text-app-secondary hover:text-app-primary hover:border-app-brand text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm active:scale-95"
+                title="Copy patch to clipboard"
+              >
+                {copiedPatch ? (
+                  <>
+                    <Check size={12} className="text-emerald-400" />
+                    <span className="text-emerald-400">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={12} />
+                    <span>Copy Patch</span>
+                  </>
+                )}
+              </button>
+            </div>
             {showPatch && (
               <pre className="bg-app-input border border-app-border/50 rounded-lg p-4 text-[11px] font-mono text-gray-300 overflow-auto max-h-80 whitespace-pre custom-scrollbar shadow-inner">
                 {analysis.fix_patch}
               </pre>
-            )}
-          </div>
-        )}
-
-        {analysis.fix_patch && (
-          <div className="pt-6 border-t border-app-border flex items-center justify-between flex-wrap gap-4">
-            <div className="text-[11px] font-bold text-app-secondary uppercase tracking-widest">
-              {analysis.auto_fix_applied ? (
-                <span className="text-emerald-400">
-                  ✓ Fix submitted: {analysis.auto_fix_result}
-                </span>
-              ) : (
-                "Actionable resolution available for this failure"
-              )}
-            </div>
-            {!analysis.auto_fix_applied && (
-              <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-emerald-700 transition-all shadow-sm">
-                <Wrench size={14} />
-                Apply Fix to Source
-              </button>
             )}
           </div>
         )}

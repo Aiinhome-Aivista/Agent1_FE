@@ -44,6 +44,8 @@ import {
   BrainCircuit,
   Loader2,
   Sparkles,
+  Wrench,
+  ExternalLink,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useStore } from "../hooks/useStore";
@@ -415,6 +417,7 @@ function TimelineView({ incident }: TimelineViewProps) {
 // ─────────────────────────────────────────────────────────────────────
 
 function SolutionPanel({ incident }: { incident: Incident }) {
+  const navigate = useNavigate();
   const [cls, setCls] = useState<ClassifyResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<"pr" | "ingest" | "refine" | null>(null);
@@ -454,7 +457,11 @@ function SolutionPanel({ incident }: { incident: Incident }) {
       const r = await api.raisePR(incident.id);
       if (r.ok && r.mode === "pr") setMsg(`PR opened: ${r.pr_url}`);
       else if (r.ok && r.mode === "issue") setMsg(`Issue filed: ${r.message}`);
-      else setMsg(r.reason || r.message || "Could not raise a PR for this incident.");
+      else if (r.skipped) {
+        setMsg(`Git repository not linked for this pipeline. Use 'Investigate & Fix' to apply directly in the platform, or ingest a merged PR below.`);
+      } else {
+        setMsg(r.reason || r.message || "Could not raise a PR for this incident.");
+      }
     } catch (e: any) {
       setMsg(e?.message || "Failed to raise PR");
     } finally {
@@ -607,10 +614,21 @@ function SolutionPanel({ incident }: { incident: Incident }) {
 
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-3 pt-1">
+          {incident.pipeline_id && (
+            <button
+              onClick={() => navigate(`/app/pipelines/${incident.pipeline_id}`)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm transition-colors"
+              title="Open pipeline investigation to view logs and apply source platform fix"
+            >
+              <Wrench className="w-3.5 h-3.5" />
+              Investigate &amp; Apply Fix
+            </button>
+          )}
           <button
             onClick={handleRaisePR}
             disabled={!!busy}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-app-brand text-white border border-transparent shadow-md hover:bg-[#E04B0E] hover:shadow-[0_4px_20px_rgba(255,90,20,0.2)] rounded-lg disabled:opacity-50 transition-colors"
+            title="Create a Git branch and open a Pull Request for repository code fixes"
           >
             {busy === "pr" ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -623,6 +641,7 @@ function SolutionPanel({ incident }: { incident: Incident }) {
             onClick={() => setShowIngest((v) => !v)}
             disabled={!!busy}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-app-secondary bg-app-surface border border-app-border rounded-lg hover:border-app-brand hover:text-app-primary shadow-sm disabled:opacity-50 transition-colors"
+            title="Ingest a merged PR to teach the Knowledge Base"
           >
             <Check className="w-3.5 h-3.5" />
             Ingest merged PR
@@ -631,6 +650,7 @@ function SolutionPanel({ incident }: { incident: Incident }) {
             onClick={openRefine}
             disabled={!!busy}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-app-secondary bg-app-surface border border-app-border rounded-lg hover:border-app-brand hover:text-app-primary shadow-sm disabled:opacity-50 transition-colors"
+            title="Review and approve the solution to train the Knowledge Base"
           >
             <Sparkles className="w-3.5 h-3.5" />
             Refine &amp; approve fix

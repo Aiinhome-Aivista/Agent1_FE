@@ -59,23 +59,28 @@ export function PipelinesPage() {
 
   const connectorId = searchParams.get("connector_id");
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setLoading(true);
+    try {
+      const [pData, cData] = await Promise.all([
+        api.pipelines(connectorId ? { connector_id: connectorId } : {}),
+        api.connectors(),
+      ]);
+      setLocalPipelines(pData);
+      setConnectors(cData);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [pData, cData] = await Promise.all([
-          api.pipelines(connectorId ? { connector_id: connectorId } : {}),
-          api.connectors(),
-        ]);
-        setLocalPipelines(pData);
-        setConnectors(cData);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    handleRefresh();
   }, [connectorId]);
 
   // Handle individual pipeline detail fetch
@@ -219,6 +224,27 @@ export function PipelinesPage() {
                 </button>
               ))}
             </div>
+            {/* Refresh button */}
+            <button
+              id="pipelines-refresh-btn"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Refresh pipeline list"
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold uppercase tracking-wider border transition-all duration-200",
+                refreshing
+                  ? "border-app-border text-app-secondary cursor-not-allowed opacity-60"
+                  : "border-app-border text-app-secondary hover:text-app-primary hover:border-blue-500/50 hover:bg-blue-500/5 active:scale-95",
+              )}
+            >
+              <RefreshCw
+                className={cn(
+                  "w-3.5 h-3.5 transition-transform",
+                  refreshing && "animate-spin",
+                )}
+              />
+              <span className="hidden sm:inline">{refreshing ? "Syncing..." : "Refresh"}</span>
+            </button>
           </div>
 
           {connectorId && (

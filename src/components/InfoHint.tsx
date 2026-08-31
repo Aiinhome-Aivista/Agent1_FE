@@ -43,31 +43,47 @@ export function InfoHint({
         aria-label="More information"
         onClick={() => setOpen((v) => !v)}
         onBlur={() => setOpen(false)}
-        className="text-gray-400 hover:text-gray-700 transition-colors focus:outline-none focus:text-gray-700"
+        className="text-gray-400 hover:text-app-brand transition-colors focus:outline-none"
       >
         <Info className="w-3.5 h-3.5" strokeWidth={2.25} />
       </button>
 
       {open && (
         <div
-          className={`absolute z-50 top-6 ${pos} w-72 bg-app-input text-app-primary text-[11px] leading-relaxed rounded-lg shadow-xl px-3.5 py-3 pointer-events-none`}
+          className={`absolute z-[150] top-6 ${pos} w-80 max-w-sm bg-[#1E1E1E]/95 backdrop-blur-md border border-[#3A3A3A] text-white text-[11px] leading-relaxed rounded-lg shadow-2xl p-3.5 pointer-events-none transition-all animate-in fade-in zoom-in-95 duration-150 normal-case tracking-normal font-normal text-left`}
         >
           {title && (
-            <div className="font-bold text-app-primary mb-1.5 tracking-wide">
+            <div className="font-bold text-white mb-2 tracking-wide text-xs border-b border-[#333333] pb-1.5 normal-case">
               {title}
             </div>
           )}
           {lines.length > 1 ? (
-            <ul className="space-y-1">
-              {lines.map((l, i) => (
-                <li key={i} className="flex gap-1.5">
-                  <span className="text-gray-400 shrink-0">•</span>
-                  <span className="text-gray-200">{l}</span>
-                </li>
-              ))}
+            <ul className="space-y-2">
+              {lines.map((l, i) => {
+                const colonIdx = l.indexOf(":");
+                const hasPrefix = colonIdx !== -1 && colonIdx < 35;
+                const prefix = hasPrefix ? l.slice(0, colonIdx + 1) : "";
+                const rest = hasPrefix ? l.slice(colonIdx + 1) : l;
+
+                return (
+                  <li key={i} className="flex gap-2 items-start text-[11px] leading-normal">
+                    <span className="text-app-brand font-bold shrink-0 mt-0.5">•</span>
+                    <span className="text-gray-300">
+                      {hasPrefix ? (
+                        <>
+                          <strong className="text-white font-semibold mr-1">{prefix}</strong>
+                          {rest}
+                        </>
+                      ) : (
+                        l
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
-            <span className="text-gray-200">{lines[0]}</span>
+            <span className="text-gray-300 leading-normal">{lines[0]}</span>
           )}
         </div>
       )}

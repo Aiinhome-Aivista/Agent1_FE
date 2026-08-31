@@ -57,6 +57,7 @@ export function RunbooksPage() {
     string | number | null
   >(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [runbookToDelete, setRunbookToDelete] = useState<
     string | number | null
@@ -66,6 +67,7 @@ export function RunbooksPage() {
   const pollRef = useRef<number | null>(null);
 
   const fetchAll = async () => {
+    setRefreshing(true);
     try {
       const list = await api.runbooks(true /* include archived */);
       setRunbooks(list.map(hydrate));
@@ -74,6 +76,7 @@ export function RunbooksPage() {
       setError(e?.message || "Failed to load runbooks");
     } finally {
       setLoading(false);
+      setTimeout(() => setRefreshing(false), 450);
     }
   };
 
@@ -206,13 +209,14 @@ export function RunbooksPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={fetchAll}
-                className="inline-flex items-center gap-1 px-3 py-2 bg-app-surface border border-app-border hover:bg-app-bg text-app-secondary text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-sm"
-                title="Refresh"
+                disabled={refreshing}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-app-surface border border-app-border hover:bg-app-bg text-app-secondary hover:text-app-primary text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60"
+                title="Refresh runbooks list"
               >
                 <RefreshCw
-                  className={cn("w-3.5 h-3.5", loading && "animate-spin")}
+                  className={cn("w-3.5 h-3.5", refreshing && "animate-spin text-app-brand")}
                 />
-                Refresh
+                {refreshing ? "Refreshing…" : "Refresh"}
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
@@ -239,28 +243,32 @@ export function RunbooksPage() {
               value={stats.total}
               icon={BookOpen}
               accent="pwc"
-              sub="tracked operational SOPs"
+              sub="operational SOPs"
+              tooltip="Total Standard Operating Procedure (SOP) documents uploaded to the knowledge base."
             />
             <StatCard
               label="Active"
               value={stats.active}
               icon={CheckCircle2}
               accent="pwc"
-              sub="indexed in vector DB"
+              sub="ready for AI diagnosis"
+              tooltip="Runbooks fully indexed and actively referenced by AI agents for root cause analysis and remediation."
             />
             <StatCard
               label="Processing"
               value={stats.processing}
               icon={Loader2}
               accent="pwc"
-              sub="being chunked & embedded"
+              sub="indexing in progress"
+              tooltip="Documents currently being parsed, chunked, and embedded into vector storage."
             />
             <StatCard
-              label="Indexed Chunks"
+              label="Knowledge Rules"
               value={stats.indexed}
               icon={Sparkles}
               accent="pwc"
-              sub="vectors in Chroma"
+              sub="searchable AI procedures"
+              tooltip="Total procedural rules and resolution steps extracted from runbooks and indexed for semantic AI diagnosis search."
             />
           </div>
 

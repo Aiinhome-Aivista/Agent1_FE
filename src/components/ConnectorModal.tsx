@@ -224,18 +224,18 @@ export function ConnectorModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[100] flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-y-auto"
         >
           <motion.div
             initial={{ scale: 0.96, opacity: 0, y: 8 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.96, opacity: 0, y: 8 }}
             transition={{ duration: 0.18 }}
-            className="bg-app-surface rounded-2xl border border-app-border w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl my-2"
+            className="bg-app-surface rounded-2xl border border-app-border w-full max-w-2xl max-h-[85vh] sm:max-h-[88vh] flex flex-col shadow-2xl my-auto relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-app-border">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-app-border bg-app-surface shrink-0 z-10">
               <div className="flex items-center gap-3 min-w-0">
                 {view === "new" && (
                   <button
@@ -272,7 +272,7 @@ export function ConnectorModal({
             )}
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
               {view === "list" && (
                 <ListView
                   connectors={activeConnectors}
@@ -500,7 +500,7 @@ function NewConnectorForm({
         <label className="block text-xs uppercase tracking-wide text-app-secondary font-semibold mb-2">
           Type
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {TYPE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -508,7 +508,7 @@ function NewConnectorForm({
               onClick={() => onTypeChange(opt.value)}
               className={`p-3 rounded-lg border text-left transition-all ${
                 type === opt.value
-                  ? "border-[#111827] bg-app-bg shadow-sm ring-1 ring-[#111827]"
+                  ? "border-app-brand bg-app-bg shadow-sm ring-1 ring-app-brand"
                   : "border-app-border hover:border-[#9CA3AF] bg-app-surface"
               }`}
             >
@@ -602,7 +602,7 @@ function FieldGroup({
 }
 
 const inputCls =
-  "w-full px-3 py-2 rounded-lg border border-app-border bg-app-surface text-sm text-app-primary focus:outline-none focus:border-[#111827]";
+  "w-full px-3.5 py-2.5 rounded-lg border border-app-border bg-app-surface text-sm text-app-primary focus:outline-none focus:border-app-brand focus:ring-1 focus:ring-app-brand transition-all";
 
 function ADFForm({
   creds,
@@ -618,7 +618,7 @@ function ADFForm({
         Azure AD service principal — needs{" "}
         <strong>Data Factory Contributor</strong> on the target factory.
       </p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <FieldGroup label="Tenant ID">
           <input
             className={inputCls}
@@ -727,48 +727,50 @@ function GitForm({
         GitHub PAT with <strong>repo</strong> + <strong>actions:read</strong>{" "}
         scopes.
       </p>
-      <FieldGroup label="Provider">
-        <select
-          className={inputCls}
-          value={creds.provider}
-          onChange={(e) => update("provider", e.target.value)}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <FieldGroup label="Provider">
+          <select
+            className={inputCls}
+            value={creds.provider}
+            onChange={(e) => update("provider", e.target.value)}
+          >
+            <option value="github">GitHub</option>
+            <option value="gitlab" disabled>
+              GitLab (coming soon)
+            </option>
+          </select>
+        </FieldGroup>
+        <FieldGroup label="Owner / Org">
+          <input
+            className={inputCls}
+            value={creds.owner}
+            onChange={(e) => update("owner", e.target.value)}
+            placeholder="username or organization"
+            required
+          />
+        </FieldGroup>
+        <FieldGroup
+          label="Repository (optional)"
+          hint="Leave blank to sync all repos owner has access to"
         >
-          <option value="github">GitHub</option>
-          <option value="gitlab" disabled>
-            GitLab (coming soon)
-          </option>
-        </select>
-      </FieldGroup>
-      <FieldGroup label="Owner / Org">
-        <input
-          className={inputCls}
-          value={creds.owner}
-          onChange={(e) => update("owner", e.target.value)}
-          placeholder="username or organization"
-          required
-        />
-      </FieldGroup>
-      <FieldGroup
-        label="Repository (optional)"
-        hint="Leave blank to sync all repos owner has access to"
-      >
-        <input
-          className={inputCls}
-          value={creds.repo}
-          onChange={(e) => update("repo", e.target.value)}
-          placeholder="my-repo"
-        />
-      </FieldGroup>
-      <FieldGroup label="Personal Access Token">
-        <input
-          className={inputCls}
-          type="password"
-          autoComplete="new-password"
-          value={creds.token}
-          onChange={(e) => update("token", e.target.value)}
-          required
-        />
-      </FieldGroup>
+          <input
+            className={inputCls}
+            value={creds.repo}
+            onChange={(e) => update("repo", e.target.value)}
+            placeholder="my-repo"
+          />
+        </FieldGroup>
+        <FieldGroup label="Personal Access Token">
+          <input
+            className={inputCls}
+            type="password"
+            autoComplete="new-password"
+            value={creds.token}
+            onChange={(e) => update("token", e.target.value)}
+            required
+          />
+        </FieldGroup>
+      </div>
     </div>
   );
 }
@@ -788,24 +790,13 @@ function GlueForm({
           GlueReadOnlyAccess
         </strong> and <strong>CloudWatchLogsReadOnlyAccess</strong>.
       </p>
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <FieldGroup label="AWS Access Key ID">
           <input
             className={inputCls}
             value={creds.aws_access_key_id}
             onChange={(e) => update("aws_access_key_id", e.target.value)}
             placeholder="AKIA..."
-            required
-          />
-        </FieldGroup>
-        <FieldGroup label="AWS Secret Access Key">
-          <input
-            className={inputCls}
-            type="password"
-            autoComplete="new-password"
-            value={creds.aws_secret_access_key}
-            onChange={(e) => update("aws_secret_access_key", e.target.value)}
-            placeholder="Enter secret key"
             required
           />
         </FieldGroup>
@@ -818,6 +809,19 @@ function GlueForm({
             required
           />
         </FieldGroup>
+        <div className="sm:col-span-2">
+          <FieldGroup label="AWS Secret Access Key">
+            <input
+              className={inputCls}
+              type="password"
+              autoComplete="new-password"
+              value={creds.aws_secret_access_key}
+              onChange={(e) => update("aws_secret_access_key", e.target.value)}
+              placeholder="Enter secret key"
+              required
+            />
+          </FieldGroup>
+        </div>
       </div>
     </div>
   );

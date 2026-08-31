@@ -3,6 +3,7 @@ import { Moon, Sun, Activity, Brain, Settings, Zap, Plus, LogOut, Monitor, Check
 import { useStore } from '../hooks/useStore';
 import { cn } from '../lib/utils';
 import { auth } from '../services/api';
+import { Tooltip } from './Tooltip';
 
 interface Props {
   title: string;
@@ -108,10 +109,13 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
   const { state } = useStore();
   const activeAgents = state.agents.filter((a) => a.status === 'thinking').length;
   const activePipelines = state.pipelines.length;
-  const unhealthy = state.pipelines.filter((p) => p.status !== 'healthy').length;
+  const unhealthy = state.pipelines.filter((p) => {
+    const s = (p.last_run_status || p.status || '').toLowerCase();
+    return s !== 'healthy' && s !== 'succeeded';
+  }).length;
 
   return (
-    <header className="h-20 border-b border-app-border bg-app-surface flex items-center justify-between relative z-50 shrink-0 px-6">
+    <header className="h-20 border-b border-app-border bg-app-surface flex items-center justify-between relative z-30 shrink-0 px-6">
       <div className="flex items-center gap-6 min-w-0 h-full">
         <div className="flex items-center gap-3 pr-6 border-r border-app-border h-10">
           <div className="w-9 h-9 rounded-md bg-app-brand flex items-center justify-center shrink-0">
@@ -142,11 +146,17 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
             icon={<Activity className="w-3.5 h-3.5 text-[#9CA3AF]" />} 
             label="Pipelines" 
             value={`${activePipelines}`} 
+            tooltip={`Total data pipelines registered across all connected platforms (${activePipelines} total pipelines).`}
           />
           <Stat
             icon={<Brain className={cn('w-3.5 h-3.5', activeAgents > 0 ? 'text-app-brand' : 'text-app-secondary')} />}
             label="Agents"
             value={activeAgents > 0 ? `${activeAgents} thinking` : 'Idle'}
+            tooltip={
+              activeAgents > 0
+                ? `${activeAgents} AI diagnostic agent(s) actively analyzing logs and investigating errors in real time.`
+                : 'AI Diagnostic Agents are standby and ready to analyze logs upon pipeline failure.'
+            }
           />
           <Stat
             icon={
@@ -159,6 +169,11 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
             }
             label="Health"
             value={unhealthy === 0 ? 'Stable' : `${unhealthy} degraded`}
+            tooltip={
+              unhealthy === 0
+                ? 'All tracked pipelines are healthy (latest execution succeeded).'
+                : `${unhealthy} of ${activePipelines} pipelines have their latest execution in a FAILED state and require investigation.`
+            }
           />
         </div>
       </div>
@@ -172,45 +187,68 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
           Connect Source
         </button>
 
-        <div
-          className={cn(
-            'px-3 py-1.5 border rounded flex items-center gap-2',
+        <Tooltip
+          title={state.connected ? "Real-time Telemetry Stream" : "Telemetry Stream"}
+          content={
             state.connected
-              ? 'bg-emerald-50 border-emerald-100'
-              : 'bg-amber-50 border-amber-100',
-          )}
+              ? "Connected to the AgenticOps control plane daemon. Live pipeline events, cluster health, and AI diagnoses are syncing in real time."
+              : "Disconnected. Attempting to reconnect to the real-time event cluster."
+          }
+          side="bottom"
+          align="end"
         >
           <div
             className={cn(
-              'w-1 h-1 rounded-full',
-              state.connected ? 'bg-emerald-500' : 'bg-amber-500',
-            )}
-          />
-          <span
-            className={cn(
-              'text-[10px] font-bold uppercase tracking-tight',
-              state.connected ? 'text-emerald-700' : 'text-amber-700',
+              'px-3 py-1.5 border rounded flex items-center gap-2 cursor-default transition-all shadow-sm',
+              state.connected
+                ? 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50'
+                : 'bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50',
             )}
           >
-            {state.connected ? 'Cluster Stable' : 'Reconnecting'}
-          </span>
-        </div>
+            <div
+              className={cn(
+                'w-1.5 h-1.5 rounded-full',
+                state.connected ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-amber-400 animate-pulse',
+              )}
+            />
+            <span
+              className={cn(
+                'text-[10px] font-bold uppercase tracking-tight',
+                state.connected ? 'text-emerald-400' : 'text-amber-400',
+              )}
+            >
+              {state.connected ? 'Cluster Stable' : 'Reconnecting'}
+            </span>
+          </div>
+        </Tooltip>
         <UserMenu />
       </div>
     </header>
   );
 }
 
-function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+function Stat({
+  icon,
+  label,
+  value,
+  tooltip,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tooltip?: string;
+}) {
   return (
-    <div className="flex items-center gap-2">
-      {icon}
-      <div className="flex flex-col leading-none">
-        <span className="text-[9px] text-[#9CA3AF] uppercase font-bold tracking-[0.18em]">
-          {label}
-        </span>
-        <span className="text-xs font-semibold mt-1">{value}</span>
+    <Tooltip title={label} content={tooltip} side="bottom">
+      <div className="flex items-center gap-2 cursor-default hover:opacity-90 transition-opacity py-1 px-1.5 rounded">
+        {icon}
+        <div className="flex flex-col leading-none">
+          <span className="text-[9px] text-[#9CA3AF] uppercase font-bold tracking-[0.18em]">
+            {label}
+          </span>
+          <span className="text-xs font-semibold mt-1">{value}</span>
+        </div>
       </div>
-    </div>
+    </Tooltip>
   );
 }

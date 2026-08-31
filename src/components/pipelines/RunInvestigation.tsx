@@ -21,6 +21,7 @@ import {
   User,
   Copy,
   Check,
+  Target,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Header } from "../Header";
@@ -1068,24 +1069,24 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
               </div>
               <div>
                 <div className="text-[10px] text-app-secondary">Failed Stage</div>
-                <div className="font-mono font-bold text-amber-400 truncate" title={raw.failed_stage}>
-                  {raw.failed_stage || "—"}
+                <div className="font-mono font-bold text-amber-400 truncate" title={raw.failed_stage || "Not available from retrieved run telemetry"}>
+                  {raw.failed_stage || "Not available from retrieved run telemetry"}
                 </div>
               </div>
               <div>
                 <div className="text-[10px] text-app-secondary">Error Code</div>
-                <div className="font-mono font-bold text-rose-400 truncate" title={raw.error_code}>
-                  {raw.error_code || "—"}
+                <div className="font-mono font-bold text-rose-400 truncate" title={raw.error_code || "Not available from retrieved run telemetry"}>
+                  {raw.error_code || "Not available from retrieved run telemetry"}
                 </div>
               </div>
               <div>
                 <div className="text-[10px] text-app-secondary">Failure Metric</div>
                 <div className="font-mono font-bold text-app-primary">
-                  {raw.invalid_records !== undefined && raw.total_records !== undefined
+                  {typeof raw.invalid_records === "number" && typeof raw.total_records === "number" && raw.invalid_records !== null && raw.total_records !== null
                     ? `${raw.invalid_records}/${raw.total_records} unique (${Number(raw.invalid_percentage || 0).toFixed(1)}% vs ${Number(raw.allowed_threshold || 5).toFixed(1)}%)`
-                    : raw.allowed_threshold !== undefined
+                    : typeof raw.allowed_threshold === "number" && raw.allowed_threshold !== null
                       ? `Threshold: ${raw.allowed_threshold}%`
-                      : "—"}
+                      : "Not available from retrieved run telemetry"}
                 </div>
               </div>
             </div>
@@ -1101,6 +1102,28 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                     {cat.replace(/_/g, " ")}: <strong>{String(cnt)}</strong>
                   </span>
                 ))}
+              </div>
+            )}
+
+            {/* Recovery Success Criteria (P0-1) */}
+            {raw.recovery_success_criteria && (
+              <div className="pt-2.5 border-t border-app-border/40 flex items-start gap-2.5">
+                <span className="p-1 rounded bg-emerald-500/10 text-emerald-400 mt-0.5 shrink-0">
+                  <Target className="w-3.5 h-3.5" />
+                </span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-app-primary text-[11px]">Recovery Success Criteria:</span>
+                    {typeof raw.recovery_success_criteria.allowed_invalid_count === "number" && (
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-[10px]">
+                        Target: {raw.recovery_success_criteria.comparison_operator || "<="} {raw.recovery_success_criteria.allowed_invalid_count} invalid records
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-app-secondary leading-relaxed">
+                    {raw.recovery_success_criteria.message}
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -1149,27 +1172,55 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             return <StructuredAnalysis data={structuredData} />;
           }
 
+          const verifiedRootCause = raw.verified_root_cause || analysis.root_cause;
+          const inferredContributingCause = raw.inferred_contributing_cause;
+
           return (
-            analysis.root_cause && (
-              <div>
-                <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-                  Root Cause
+            <div className="space-y-3">
+              {verifiedRootCause && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      Verified Root Cause (Deterministic Evidence)
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                      Verified Fact
+                    </span>
+                  </div>
+                  <div className="text-sm text-app-primary bg-app-surface p-4 rounded-lg border border-app-border leading-relaxed font-sans">
+                    {verifiedRootCause
+                      .split(/\*\*(.*?)\*\*/g)
+                      .map((part: string, i: number) =>
+                        i % 2 === 1 ? (
+                          <strong key={i} className="font-bold text-app-primary">
+                            {part}
+                          </strong>
+                        ) : (
+                          part
+                        ),
+                      )}
+                  </div>
                 </div>
-                <div className="text-sm text-app-primary whitespace-pre-wrap bg-app-surface p-4 rounded-lg border border-app-border leading-relaxed">
-                  {analysis.root_cause
-                    .split(/\*\*(.*?)\*\*/g)
-                    .map((part: string, i: number) =>
-                      i % 2 === 1 ? (
-                        <strong key={i} className="font-bold text-app-primary">
-                          {part}
-                        </strong>
-                      ) : (
-                        part
-                      ),
-                    )}
+              )}
+
+              {inferredContributingCause && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                      Inferred Contributing Cause (Reasoning & Analysis)
+                    </span>
+                    <span className="text-[10px] font-mono text-sky-400 font-bold">
+                      Inferred
+                    </span>
+                  </div>
+                  <div className="text-sm text-app-secondary bg-app-surface/60 p-4 rounded-lg border border-sky-500/20 leading-relaxed font-sans italic">
+                    {inferredContributingCause}
+                  </div>
                 </div>
-              </div>
-            )
+              )}
+            </div>
           );
         })()}
 
@@ -1514,7 +1565,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                   ? "Historical Similar Incidents & Runbooks (Reference Only)"
                   : "Knowledge Base References"}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1.5 custom-scrollbar">
                 {refs.map((ref, i) => (
                   <div
                     key={i}

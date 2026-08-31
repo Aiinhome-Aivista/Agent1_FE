@@ -6,7 +6,7 @@ import http from "node:http";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const targetUrl = env.VITE_BACKEND_URL || "http://0.0.0.0:3006";
+  const targetUrl = env.VITE_BACKEND_URL || "http://127.0.0.1:3006";
   const wsTargetUrl = targetUrl.replace(/^http/, "ws");
 
   return {
@@ -24,8 +24,13 @@ export default defineConfig(({ mode }) => {
           agent: new http.Agent({ keepAlive: true, keepAliveMsecs: 3000 }),
           configure: (proxy) => {
             proxy.on("error", (err) => {
-              // Silently swallow noisy/expected network disconnect logs
-              if (err.message.includes("ECONNRESET")) return;
+              // Silently swallow startup reconnects and transient disconnects
+              if (
+                err.message.includes("ECONNRESET") ||
+                err.message.includes("ECONNREFUSED") ||
+                err.message.includes("ECONNABORTED")
+              )
+                return;
             });
           },
         },
@@ -37,6 +42,7 @@ export default defineConfig(({ mode }) => {
             proxy.on("error", (err) => {
               if (
                 err.message.includes("ECONNRESET") ||
+                err.message.includes("ECONNREFUSED") ||
                 err.message.includes("ECONNABORTED")
               )
                 return;

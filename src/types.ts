@@ -223,10 +223,16 @@ export interface LogEntry {
 
 export interface DashboardStats {
   total_connectors: number;
+  connected_connectors?: number;
   total_pipelines: number;
+  healthy_pipelines?: number;
+  failed_pipelines?: number;
+  fleet_health_rate?: number;
   runs_last_24h: number;
-  success_rate_24h: number;
+  total_runs?: number;
+  success_rate_24h: number | null;
   failed_runs_24h: number;
+  total_failed_runs?: number;
   pending_analyses: number;
 }
 
@@ -335,11 +341,19 @@ export interface KBSettings {
   last_run_at?: string | null;
   last_run_summary?: {
     ran_at?: string;
+    duration_ms?: number;
     incidents_replayed?: number;
     patterns_mirrored?: number;
     runbooks_seen?: number;
     graph_writes?: number;
     errors?: number;
+    logs?: Array<{
+      id: string;
+      timestamp: string;
+      status: "success" | "error";
+      message: string;
+      details: Record<string, any>;
+    }>;
   } | null;
 }
 

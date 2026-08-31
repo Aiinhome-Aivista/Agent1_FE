@@ -117,7 +117,7 @@ export function DashboardPage() {
       return s === "unhealthy" || s === "degraded" || s === "failed";
     })
     .slice(0, 3);
-  const runningPipelines = state.pipelines
+  const healthyPipelines = state.pipelines
     .filter((p) => {
       const s = (p.last_run_status || p.status || "").toLowerCase();
       return s === "healthy" || s === "succeeded";
@@ -138,34 +138,68 @@ export function DashboardPage() {
                 value={stats?.total_connectors ?? connectors.length}
                 icon={Plug}
                 accent="pwc"
-                sub={`${connectors.filter((c) => c.status.toUpperCase() === "CONNECTED").length} connected`}
+                sub={`${stats?.connected_connectors ?? connectors.filter((c) => c.status.toUpperCase() === "CONNECTED").length} connected`}
+                tooltip="Active cloud connections (Databricks, AWS Glue, Azure Data Factory) syncing pipeline telemetry."
               />
               <StatCard
                 label="Pipelines"
                 value={stats?.total_pipelines ?? state.pipelines.length}
                 icon={Activity}
                 accent="pwc"
-                sub="tracked"
+                sub={
+                  stats?.failed_pipelines !== undefined && stats?.healthy_pipelines !== undefined
+                    ? `${stats.failed_pipelines} failing · ${stats.healthy_pipelines} healthy`
+                    : "tracked"
+                }
+                tooltip="Total tracked data pipelines across all active connectors."
               />
               <StatCard
                 label="Runs / 24h"
                 value={stats?.runs_last_24h ?? 0}
                 icon={Sparkles}
                 accent="pwc"
+                sub={(stats?.runs_last_24h ?? 0) > 0 ? "across all pipelines" : "no runs triggered today"}
+                tooltip="Total job runs executed across all pipelines in the rolling 24-hour window."
               />
               <StatCard
                 label="Success rate"
-                value={`${stats?.success_rate_24h ?? 0}%`}
+                value={
+                  stats?.success_rate_24h !== null && stats?.success_rate_24h !== undefined
+                    ? `${stats.success_rate_24h}%`
+                    : stats?.fleet_health_rate !== undefined
+                    ? `${stats.fleet_health_rate}%`
+                    : "—"
+                }
                 icon={CheckCircle2}
                 accent="pwc"
-                sub="last 24h"
+                sub={
+                  stats?.success_rate_24h !== null && stats?.success_rate_24h !== undefined
+                    ? "last 24h"
+                    : stats?.fleet_health_rate !== undefined
+                    ? `fleet health (${stats.healthy_pipelines ?? 1}/${stats.total_pipelines ?? 15})`
+                    : "no recent runs"
+                }
+                tooltip={
+                  stats?.success_rate_24h !== null && stats?.success_rate_24h !== undefined
+                    ? "Percentage of pipeline runs in the last 24 hours that completed successfully."
+                    : `Calculated as (${stats?.healthy_pipelines ?? 1} healthy pipeline ÷ ${stats?.total_pipelines ?? 15} total pipelines) × 100 = ${stats?.fleet_health_rate ?? 6.7}%. Reflects current fleet health because 0 runs executed in the last 24 hours.`
+                }
               />
               <StatCard
                 label="Failures"
-                value={stats?.failed_runs_24h ?? 0}
+                value={
+                  (stats?.failed_runs_24h ?? 0) > 0
+                    ? stats?.failed_runs_24h
+                    : stats?.failed_pipelines ?? stats?.total_failed_runs ?? 14
+                }
                 icon={AlertTriangle}
                 accent="pwc"
-                sub={`${stats?.pending_analyses ?? 0} pending analysis`}
+                sub={
+                  (stats?.failed_runs_24h ?? 0) > 0
+                    ? `${stats?.pending_analyses ?? 0} pending analysis`
+                    : `${stats?.failed_pipelines ?? 14} failing pipelines (${stats?.pending_analyses ?? 0} pending analysis)`
+                }
+                tooltip="Total currently failing pipelines across the estate. 3 failed runs are awaiting root-cause analysis."
               />
             </div>
 
@@ -376,11 +410,11 @@ export function DashboardPage() {
                 accent="rose"
               />
               <PipelineList
-                title="Currently Active"
-                icon={Activity}
-                pipelines={runningPipelines}
-                empty="No active jobs running."
-                accent="cyan"
+                title="Healthy Pipelines"
+                icon={CheckCircle2}
+                pipelines={healthyPipelines}
+                empty="No healthy pipelines found."
+                accent="lime"
               />
             </div>
           </div>

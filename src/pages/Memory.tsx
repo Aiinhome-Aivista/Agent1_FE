@@ -3,6 +3,7 @@ import { Search, Brain, BookOpen, Layers, ArrowRight, AlertTriangle, ShieldCheck
 import { api } from '../services/api';
 import { cn, timeAgo } from '../lib/utils';
 import { Loading } from '../components/Loading';
+import { InfoHint } from '../components/InfoHint';
 import type { MemoryEntry } from '../types';
 
 const KIND_META = {
@@ -172,10 +173,22 @@ export function MemoryPage() {
           {/* Result list */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#9CA3AF]">
+              <h3 className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#9CA3AF] flex items-center gap-1.5">
                 {searchResults.length > 0
                   ? `RAG · ${searchResults.length} top matches`
                   : `${visible.length} entries`}
+                <InfoHint
+                  align="left"
+                  title="Memory Card Elements & Definitions"
+                  text={[
+                    "Title & Status: The specific pipeline ETL job that failed and its final execution state (FAILED / REMEDIATED).",
+                    "Memory Tier: 'EPISODIC' represents historical incident episodes, 'PROCEDURAL' contains operational playbooks, 'SEMANTIC' holds domain runbooks.",
+                    "Root Cause Analysis (RCA): Expandable drawer detailing the AI diagnostic reasoning, error patterns, and remediation plan.",
+                    "Pipeline Tag: Identifies the target pipeline or table.",
+                    "Severity Badge: Risk classification (LOW, MEDIUM, HIGH) determining automated intervention vs escalation.",
+                    "Mode Badge: 'AUTO' means autonomous AI remediation; 'MANUAL' means engineer approval required."
+                  ]}
+                />
               </h3>
               {searchResults.length > 0 && (
                 <button

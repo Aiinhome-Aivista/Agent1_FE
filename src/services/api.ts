@@ -266,8 +266,30 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
 
-  metricsHealth: () => req<HealthMetric[]>("/metrics/health"),
-  metricsSummary: () => req<MetricsSummary>("/metrics/summary"),
+  metricsHealth: (hours?: number, startDate?: string, endDate?: string) => {
+    const p = new URLSearchParams();
+    if (startDate && endDate) {
+      p.set("start_date", startDate);
+      p.set("end_date", endDate);
+    } else if (hours != null) {
+      p.set("hours", String(hours));
+    }
+    const q = p.toString();
+    return req<HealthMetric[]>(`/metrics/health${q ? `?${q}` : ""}`);
+  },
+
+  metricsSummary: (hours?: number, startDate?: string, endDate?: string) => {
+    const p = new URLSearchParams();
+    if (startDate && endDate) {
+      p.set("start_date", startDate);
+      p.set("end_date", endDate);
+    } else if (hours != null) {
+      p.set("hours", String(hours));
+    }
+    const q = p.toString();
+    return req<MetricsSummary>(`/metrics/summary${q ? `?${q}` : ""}`);
+  },
+
   stats: () => req<DashboardStats>("/dashboard/stats"),
 
   connectAWSGlue: (credentials: {
@@ -346,18 +368,45 @@ export const api = {
   // ─────────────────────────────────────────────────────────────────
   // NEW: Performance metrics
   // ─────────────────────────────────────────────────────────────────
-  pipelinePerformance: (hours = 24) =>
-    req<PipelinePerformance[]>(`/metrics/pipelines?hours=${hours}`),
+  pipelinePerformance: (hours?: number, startDate?: string, endDate?: string) => {
+    const p = new URLSearchParams();
+    if (startDate && endDate) {
+      p.set("start_date", startDate);
+      p.set("end_date", endDate);
+    } else if (hours != null) {
+      p.set("hours", String(hours));
+    }
+    const q = p.toString();
+    return req<PipelinePerformance[]>(`/metrics/pipelines${q ? `?${q}` : ""}`);
+  },
 
-  pipelinePerformanceDetail: (id: number | string, hours = 24) =>
-    req<PipelinePerformance>(`/metrics/pipelines/${id}?hours=${hours}`),
+  pipelinePerformanceDetail: (id: number | string, hours?: number, startDate?: string, endDate?: string) => {
+    const p = new URLSearchParams();
+    if (startDate && endDate) {
+      p.set("start_date", startDate);
+      p.set("end_date", endDate);
+    } else if (hours != null) {
+      p.set("hours", String(hours));
+    }
+    const q = p.toString();
+    return req<PipelinePerformance>(`/metrics/pipelines/${id}${q ? `?${q}` : ""}`);
+  },
 
   ragPerformance: () => req<RagPerformance>("/metrics/rag"),
 
   llmPerformance: () => req<LlmPerformance>("/metrics/llm"),
 
-  systemMetrics: (hours = 24) =>
-    req<SystemMetrics>(`/metrics/system?hours=${hours}`),
+  systemMetrics: (hours?: number, startDate?: string, endDate?: string) => {
+    const p = new URLSearchParams();
+    if (startDate && endDate) {
+      p.set("start_date", startDate);
+      p.set("end_date", endDate);
+    } else if (hours != null) {
+      p.set("hours", String(hours));
+    }
+    const q = p.toString();
+    return req<SystemMetrics>(`/metrics/system${q ? `?${q}` : ""}`);
+  },
 
   // ─────────────────────────────────────────────────────────────────
   // NEW: Solution Knowledge Base + auto-fix (learning loop)

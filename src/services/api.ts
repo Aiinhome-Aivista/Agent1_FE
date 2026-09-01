@@ -165,7 +165,19 @@ async function uploadForm<T>(path: string, formData: FormData): Promise<T> {
 
 export const api = {
   login: (email: string, password: string) =>
-    req<{ access_token: string; expires_in: number }>("/auth/login", {
+    req<{
+      access_token: string;
+      token_type?: string;
+      expires_in?: number;
+      user?: {
+        id: number | string;
+        email: string;
+        role: string;
+        full_name?: string;
+        is_admin?: boolean;
+        is_active?: boolean;
+      };
+    }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),

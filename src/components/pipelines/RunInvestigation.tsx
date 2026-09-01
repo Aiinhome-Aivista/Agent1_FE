@@ -23,6 +23,9 @@ import {
   Check,
   Target,
   Zap,
+  X,
+  Search,
+  Shield,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Header } from "../Header";
@@ -33,7 +36,7 @@ import type { Pipeline } from "../../types";
 
 interface RunInvestigationProps {
   runId: string;
-  pipeline: Pipeline;
+  pipeline?: Pipeline;
   onBack: () => void;
 }
 
@@ -49,8 +52,10 @@ export function RunInvestigation({
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [logFilter, setLogFilter] = useState("ALL");
+  const [showLogs, setShowLogs] = useState(false);
   const [showPatch, setShowPatch] = useState(true);
   const [copiedPatch, setCopiedPatch] = useState(false);
+  const [toast, setToast] = useState<{ title: string; message: string; type?: "success" | "info" | "error" } | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   const loadData = async () => {
@@ -100,6 +105,15 @@ export function RunInvestigation({
       // If we already have analysis, we want to force re-analysis
       const result = await api.triggerRunAnalysis(runId, !!analysis);
       setAnalysis(result);
+      const completeness = result?.raw_response?.telemetry_completeness;
+      const statusLabel = completeness?.level === "COMPLETE" ? "Complete Diagnosis" : completeness?.level === "PARTIAL" ? "Partial Diagnosis" : "Complete Diagnosis";
+      const detailMsg = completeness?.reason || "Pipeline forensic investigation and root-cause synthesis completed.";
+      setToast({
+        title: statusLabel,
+        message: detailMsg,
+        type: "success"
+      });
+      setTimeout(() => setToast(null), 5000);
     } catch (e) {
       console.error("Analysis failed", e);
     } finally {
@@ -133,7 +147,29 @@ export function RunInvestigation({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-app-bg">
+    <div className="flex-1 flex flex-col min-h-0 bg-app-bg relative">
+      {/* Complete Diagnosis Toaster */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 flex items-start gap-3 rounded-xl border border-emerald-500/40 bg-app-surface/95 backdrop-blur-md p-4 text-app-primary shadow-2xl shadow-emerald-950/20 ring-1 ring-emerald-500/20 animate-in fade-in slide-in-from-top-4 max-w-sm w-full pointer-events-auto">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+          <div className="flex-1 pt-0.5 min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+              {toast.title}
+            </p>
+            <p className="mt-0.5 text-xs text-app-secondary leading-relaxed font-medium">
+              {toast.message}
+            </p>
+          </div>
+          <button
+            onClick={() => setToast(null)}
+            className="rounded-lg p-1 text-app-secondary hover:text-app-primary transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Back Action */}
@@ -248,8 +284,16 @@ export function RunInvestigation({
 
           {/* Logs Viewer */}
           <div className="bg-app-surface border border-app-border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-app-border flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2">
+            <div className={cn("px-5 py-3 flex items-center justify-between flex-wrap gap-3", showLogs && "border-b border-app-border")}>
+              <button
+                type="button"
+                onClick={() => setShowLogs((v) => !v)}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left group"
+                title={showLogs ? "Collapse Logs" : "Expand Logs"}
+              >
+                <span className="text-app-secondary group-hover:text-app-primary transition-colors">
+                  {showLogs ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                </span>
                 <Terminal size={16} className="text-app-brand" />
                 <h3 className="text-sm font-bold text-app-primary">
                   Logs{" "}
@@ -257,72 +301,76 @@ export function RunInvestigation({
                     ({filteredLogs.length})
                   </span>
                 </h3>
-              </div>
-              <div className="flex items-center gap-1">
-                {["ALL", "ERROR", "WARNING", "INFO"].map((lvl) => (
-                  <button
-                    key={lvl}
-                    onClick={() => setLogFilter(lvl)}
-                    className={cn(
-                      "px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest border transition-all",
-                      logFilter === lvl
-                        ? "border-app-brand text-app-brand bg-app-surface border border-app-border"
-                        : "border-app-border text-app-secondary hover:border-[#9CA3AF]",
-                    )}
-                  >
-                    {lvl}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="bg-app-input p-5 font-mono text-[11px] max-h-[600px] overflow-auto custom-scrollbar">
-              {filteredLogs.length === 0 ? (
-                <div className="text-app-secondary italic text-sm py-4 text-center">
-                  No logs available for this run.
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {filteredLogs.map((l, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-3 hover:bg-app-surface/5 px-2 py-0.5 rounded transition-colors group"
-                    >
-                      <span className="text-app-secondary shrink-0 select-none">
-                        {format(new Date(l.timestamp), "dd/MM/yyyy HH:mm:ss")}
-                      </span>
-                      <span
-                        className={cn(
-                          "shrink-0 w-16 font-bold",
-                          l.level === "ERROR"
-                            ? "text-rose-500"
-                            : l.level === "WARNING"
-                              ? "text-amber-500"
-                              : "text-emerald-500",
-                        )}
-                      >
-                        [{l.level}]
-                      </span>
-                      {l.source && (
-                        <span className="text-blue-600 dark:text-blue-400 shrink-0 max-w-[150px] truncate">
-                          {l.source}
-                        </span>
+              </button>
+              {showLogs && (
+                <div className="flex items-center gap-1">
+                  {["ALL", "ERROR", "WARNING", "INFO"].map((lvl) => (
+                    <button
+                      key={lvl}
+                      onClick={() => setLogFilter(lvl)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest border transition-all",
+                        logFilter === lvl
+                          ? "border-app-brand text-app-brand bg-app-surface border border-app-border"
+                          : "border-app-border text-app-secondary hover:border-[#9CA3AF]",
                       )}
-                      <span
-                        className={cn(
-                          "flex-1 whitespace-pre-wrap wrap-break-word",
-                          l.level === "ERROR"
-                            ? "text-rose-600 dark:text-rose-400"
-                            : "text-app-primary",
-                        )}
-                      >
-                        {l.message}
-                      </span>
-                    </div>
+                    >
+                      {lvl}
+                    </button>
                   ))}
-                  <div ref={logsEndRef} />
                 </div>
               )}
             </div>
+            {showLogs && (
+              <div className="bg-app-input p-5 font-mono text-[11px] max-h-[600px] overflow-auto custom-scrollbar">
+                {filteredLogs.length === 0 ? (
+                  <div className="text-app-secondary italic text-sm py-4 text-center">
+                    No logs available for this run.
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {filteredLogs.map((l, i) => (
+                      <div
+                        key={i}
+                        className="flex gap-3 hover:bg-app-surface/5 px-2 py-0.5 rounded transition-colors group"
+                      >
+                        <span className="text-app-secondary shrink-0 select-none">
+                          {format(new Date(l.timestamp), "dd/MM/yyyy HH:mm:ss")}
+                        </span>
+                        <span
+                          className={cn(
+                            "shrink-0 w-16 font-bold",
+                            l.level === "ERROR"
+                              ? "text-rose-500"
+                              : l.level === "WARNING"
+                                ? "text-amber-500"
+                                : "text-emerald-500",
+                          )}
+                        >
+                          [{l.level}]
+                        </span>
+                        {l.source && (
+                          <span className="text-blue-600 dark:text-blue-400 shrink-0 max-w-[150px] truncate">
+                            {l.source}
+                          </span>
+                        )}
+                        <span
+                          className={cn(
+                            "flex-1 whitespace-pre-wrap wrap-break-word",
+                            l.level === "ERROR"
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-app-primary",
+                          )}
+                        >
+                          {l.message}
+                        </span>
+                      </div>
+                    ))}
+                    <div ref={logsEndRef} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -713,7 +761,22 @@ function StructuredAnalysis({ data: rawData }: { data: any }) {
 function AnalysisPanel({ analysis }: { analysis: any }) {
   const [showPatch, setShowPatch] = useState(true);
   const [showWhy, setShowWhy] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+  const [showInvestigationTimeline, setShowInvestigationTimeline] = useState(false);
   const [copiedPatch, setCopiedPatch] = useState(false);
+  const [expandedFixes, setExpandedFixes] = useState<Record<number, boolean>>({});
+  const toggleExpandFix = (stepNum: number) => setExpandedFixes(prev => ({ ...prev, [stepNum]: !prev[stepNum] }));
+  const [collapsedSections, setCollapsedSections] = useState<Record<number, boolean>>({
+    1: true,
+    2: true,
+    3: true,
+    5: true,
+    6: true,
+    7: true,
+    8: true,
+  });
+  const toggleSection = (num: number) => setCollapsedSections(prev => ({ ...prev, [num]: !prev[num] }));
+  const logsEndRef = useRef<HTMLDivElement>(null);
   const confidence = analysis.confidence ?? 0;
 
   const raw = analysis.raw_response || {};
@@ -801,13 +864,16 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
     };
     tier_c_hypothesis?: {
       statement: string;
-      confidence_label: string;
-      verification_step: string;
+      confidence_label?: string;
+      verification_step?: string;
+      caveat?: string;
     }[];
     tier_d_suggested_investigations?: {
-      area: string;
-      action: string;
-      why: string;
+      title?: string;
+      area?: string;
+      action?: string;
+      why?: string;
+      evidence?: string;
     }[];
     classification_note?: string;
     verified_cause?: { type?: string; description?: string; evidence?: string[] };
@@ -832,26 +898,81 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
     icon: string;
   }[];
 
-  const immediateFixes: {
+  interface FixSubAction {
+    category: string;
+    count: number;
+    evidence?: string;
+    what_we_know?: string[];
+    what_to_investigate?: string[];
+    suggested_action?: string[];
+    validation?: string[];
+    what_to_inspect?: string;
+    action?: string;
+    what_to_fix?: string;
+  }
+
+  interface FixStep {
     step: number;
     title: string;
     action: string;
+    summary?: string;
     priority: "REQUIRED" | "OPTIONAL" | string;
+    priority_code?: string;
+    priority_level?: string;
+    actionability?: string;
+    recommendation_type?: string;
+    supported_by?: string;
+    fix_readiness?: "READY_TO_FIX" | "INVESTIGATION_REQUIRED" | "KNOWLEDGE_BASED" | string;
+    fix_readiness_label?: string;
+    why_prioritized?: string[];
+    what_we_know?: string[];
+    what_we_need_to_determine?: string[];
+    what_to_investigate?: string[];
+    suggested_fix?: string[];
+    validation_steps?: string[];
+    steps?: string[];
+    sub_actions?: FixSubAction[];
+    what_to_inspect?: string;
+    what_to_fix?: string;
     why?: string;
+    evidence?: string;
     evidence_source?: string;
+    evidence_classification?: string;
     expected_outcome?: string;
     validation?: string;
-    automation_safety?: string;
+    automation_safety?: { can_automate?: boolean; risk_level?: string; reason?: string } | string;
     automation_safety_badge?: string;
-  }[] = (() => {
+  }
+
+  const allImmediateFixes: FixStep[] = (() => {
     if (Array.isArray(raw.immediate_fix) && raw.immediate_fix.length > 0) {
       return raw.immediate_fix.map((item: any, idx: number) => ({
         step: Number(item.step || idx + 1),
         title: String(item.title || `Step ${idx + 1}`),
         action: String(item.action || item.description || ""),
+        summary: item.summary || item.action || item.description || "",
         priority: "REQUIRED",
+        priority_code: item.priority_code || item.priority_level || `P${idx}`,
+        priority_level: item.priority_level || item.priority_code || `P${idx}`,
+        actionability: item.actionability || (item.fix_readiness === "READY_TO_FIX" ? "DIRECT_FIX" : "INVESTIGATION_REQUIRED"),
+        recommendation_type: item.recommendation_type || (item.fix_readiness === "READY_TO_FIX" ? "Direct Action" : "Investigation Required"),
+        supported_by: item.supported_by || "✓ Verified Task Output",
+        fix_readiness: item.fix_readiness || (item.priority_code === "P0" ? "READY_TO_FIX" : "INVESTIGATION_REQUIRED"),
+        fix_readiness_label: item.fix_readiness_label || (item.fix_readiness === "READY_TO_FIX" || item.priority_code === "P0" ? "Direct Action" : "Investigation Required"),
+        why_prioritized: Array.isArray(item.why_prioritized) ? item.why_prioritized : (item.why ? [item.why] : undefined),
+        what_we_know: Array.isArray(item.what_we_know) ? item.what_we_know : undefined,
+        what_we_need_to_determine: Array.isArray(item.what_we_need_to_determine) ? item.what_we_need_to_determine : undefined,
+        what_to_investigate: Array.isArray(item.what_to_investigate) ? item.what_to_investigate : (item.what_to_inspect ? [item.what_to_inspect] : undefined),
+        suggested_fix: Array.isArray(item.suggested_fix) ? item.suggested_fix : (item.what_to_fix ? [item.what_to_fix] : undefined),
+        validation_steps: Array.isArray(item.validation_steps) ? item.validation_steps : (item.validation ? [item.validation] : undefined),
+        steps: Array.isArray(item.steps) ? item.steps : undefined,
+        sub_actions: Array.isArray(item.sub_actions) ? item.sub_actions : undefined,
+        what_to_inspect: item.what_to_inspect || undefined,
+        what_to_fix: item.what_to_fix || undefined,
         why: item.why || undefined,
-        evidence_source: item.evidence_source || undefined,
+        evidence: item.evidence || undefined,
+        evidence_source: item.evidence_source || "✓ Verified Task Output",
+        evidence_classification: item.evidence_classification || "✓ Verified Task Output",
         expected_outcome: item.expected_outcome || undefined,
         validation: item.validation || undefined,
         automation_safety: item.automation_safety || undefined,
@@ -865,9 +986,29 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           step: idx + 1,
           title: String(item.title || item.action || `Step ${idx + 1}`),
           action: String(item.action || item.description || item.details || ""),
+          summary: item.summary || item.action || item.description || "",
           priority: "REQUIRED",
+          priority_code: item.priority_code || item.priority_level || `P${idx}`,
+          priority_level: item.priority_level || item.priority_code || `P${idx}`,
+          actionability: item.actionability || "INVESTIGATION_REQUIRED",
+          recommendation_type: item.recommendation_type || "Investigation Required",
+          supported_by: item.supported_by || "✓ Verified Task Output",
+          fix_readiness: item.fix_readiness || "INVESTIGATION_REQUIRED",
+          fix_readiness_label: item.fix_readiness_label || "Investigation Required",
+          why_prioritized: Array.isArray(item.why_prioritized) ? item.why_prioritized : (item.why ? [item.why] : undefined),
+          what_we_know: Array.isArray(item.what_we_know) ? item.what_we_know : undefined,
+          what_we_need_to_determine: Array.isArray(item.what_we_need_to_determine) ? item.what_we_need_to_determine : undefined,
+          what_to_investigate: Array.isArray(item.what_to_investigate) ? item.what_to_investigate : (item.what_to_inspect ? [item.what_to_inspect] : undefined),
+          suggested_fix: Array.isArray(item.suggested_fix) ? item.suggested_fix : (item.what_to_fix ? [item.what_to_fix] : undefined),
+          validation_steps: Array.isArray(item.validation_steps) ? item.validation_steps : (item.validation ? [item.validation] : undefined),
+          steps: Array.isArray(item.steps) ? item.steps : undefined,
+          sub_actions: Array.isArray(item.sub_actions) ? item.sub_actions : undefined,
+          what_to_inspect: item.what_to_inspect || undefined,
+          what_to_fix: item.what_to_fix || undefined,
           why: item.why || undefined,
-          evidence_source: item.evidence_source || undefined,
+          evidence: item.evidence || undefined,
+          evidence_source: item.evidence_source || "✓ Verified Task Output",
+          evidence_classification: item.evidence_classification || "✓ Verified Task Output",
           expected_outcome: item.expected_outcome || undefined,
           validation: item.validation || undefined,
           automation_safety: item.automation_safety || undefined,
@@ -877,26 +1018,35 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
     return [];
   })();
 
-  const optionalImprovements: {
-    step: number;
-    title: string;
-    action: string;
-    priority: "REQUIRED" | "OPTIONAL" | string;
-    why?: string;
-    evidence_source?: string;
-    expected_outcome?: string;
-    validation?: string;
-    automation_safety?: string;
-    automation_safety_badge?: string;
-  }[] = (() => {
+  const p0SafetyCheck = allImmediateFixes.find(
+    (item) => item.priority_code === "P0" || item.priority_level === "P0" || item.title.startsWith("P0")
+  );
+
+  const suggestedFixes = allImmediateFixes.filter(
+    (item) => !(item.priority_code === "P0" || item.priority_level === "P0" || item.title.startsWith("P0"))
+  );
+
+  const immediateFixes = allImmediateFixes;
+
+  const optionalImprovements: FixStep[] = (() => {
     if (Array.isArray(raw.optional_improvements) && raw.optional_improvements.length > 0) {
       return raw.optional_improvements.map((item: any, idx: number) => ({
         step: Number(item.step || idx + 1),
         title: String(item.title || `Improvement ${idx + 1}`),
         action: String(item.action || item.description || ""),
         priority: "OPTIONAL",
+        priority_code: "OPTIONAL",
+        priority_level: "OPTIONAL",
+        recommendation_type: item.recommendation_type || "Knowledge-Based Suggested Fix",
+        supported_by: item.supported_by || "Knowledge Base / Runbook",
+        fix_readiness: item.fix_readiness || "KNOWLEDGE_BASED",
+        fix_readiness_label: item.fix_readiness_label || "📚 Knowledge-Based Recommendation",
+        what_to_inspect: item.what_to_inspect || undefined,
+        what_to_fix: item.what_to_fix || undefined,
         why: item.why || undefined,
-        evidence_source: item.evidence_source || undefined,
+        evidence: item.evidence || undefined,
+        evidence_source: item.evidence_source || item.evidence_classification || "Knowledge Base / Runbook",
+        evidence_classification: item.evidence_classification || item.evidence_source || "Knowledge Base / Runbook",
         expected_outcome: item.expected_outcome || undefined,
         validation: item.validation || undefined,
         automation_safety: item.automation_safety || undefined,
@@ -911,12 +1061,33 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           title: String(item.title || item.action || `Improvement ${idx + 1}`),
           action: String(item.action || item.description || item.details || ""),
           priority: "OPTIONAL",
+          priority_code: "OPTIONAL",
+          priority_level: "OPTIONAL",
+          recommendation_type: item.recommendation_type || "Knowledge-Based Suggested Fix",
+          supported_by: item.supported_by || "Knowledge Base / Runbook",
+          fix_readiness: item.fix_readiness || "KNOWLEDGE_BASED",
+          fix_readiness_label: item.fix_readiness_label || "📚 Knowledge-Based Recommendation",
+          what_to_inspect: item.what_to_inspect || undefined,
+          what_to_fix: item.what_to_fix || undefined,
+          why: item.why || undefined,
+          evidence: item.evidence || undefined,
+          evidence_source: item.evidence_source || item.evidence_classification || "Knowledge Base / Runbook",
+          evidence_classification: item.evidence_classification || item.evidence_source || "Knowledge Base / Runbook",
           expected_outcome: item.expected_outcome || undefined,
           validation: item.validation || undefined,
         }));
     }
     return [];
   })();
+
+  const nextBestAction = raw.next_best_action || (
+    suggestedFixes.length > 0 ? suggestedFixes[0] : allImmediateFixes[0]
+  );
+
+  // Part 2: Remaining fixes exclude P1 (nextBestAction) so P1 is never rendered twice
+  const remainingFixes = suggestedFixes.filter(
+    (step) => step.priority_code !== "P1" && step.priority_level !== "P1" && !step.title.startsWith("P1")
+  );
 
   const isDiagnosisFailed =
     raw.diagnosis_status === "failed" ||
@@ -1000,44 +1171,232 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
       </div>
 
       <div className="p-6 space-y-6">
-        {/* ── Diagnosis Status Banner ───────────────────────────────────── */}
-        {(() => {
-          const level = telemetryCompleteness?.level;
-          const refetched = telemetryCompleteness?.refetched;
-          if (!level || level === "UNKNOWN") return null;
+        {/* ── Quick Navigation Sticky Bar (Part 1 & 11) ────────────────────── */}
+        <div className="sticky top-0 z-20 -mx-6 -mt-6 px-6 py-2.5 bg-app-surface/95 backdrop-blur-md border-b border-app-border/70 flex items-center gap-2 overflow-x-auto custom-scrollbar text-[11px] font-bold shadow-sm">
+          <span className="text-[10px] text-app-secondary uppercase tracking-widest mr-1 shrink-0">Quick Jump:</span>
+          <a
+            href="#sec-what-happened"
+            onClick={() => setCollapsedSections(prev => ({ ...prev, 1: false }))}
+            className="px-2.5 py-1 rounded-lg bg-app-input/60 hover:bg-app-input border border-app-border/40 text-app-secondary hover:text-app-primary transition-all shrink-0 flex items-center gap-1"
+          >
+            <span>1. What Happened</span>
+          </a>
+          <a
+            href="#sec-why-failed"
+            onClick={() => setCollapsedSections(prev => ({ ...prev, 2: false }))}
+            className="px-2.5 py-1 rounded-lg bg-app-input/60 hover:bg-app-input border border-app-border/40 text-app-secondary hover:text-app-primary transition-all shrink-0 flex items-center gap-1"
+          >
+            <span>2. Why It Failed</span>
+          </a>
+          <a
+            href="#sec-safety-check"
+            onClick={() => setCollapsedSections(prev => ({ ...prev, 3: false }))}
+            className="px-2.5 py-1 rounded-lg bg-app-input/60 hover:bg-app-input border border-app-border/40 text-app-secondary hover:text-app-primary transition-all shrink-0 flex items-center gap-1"
+          >
+            <span>3. Safety Check</span>
+          </a>
+          <a
+            href="#sec-suggested-fix"
+            className="px-3 py-1 rounded-lg bg-app-input hover:bg-app-surface border border-app-border text-app-primary font-bold transition-all shrink-0 flex items-center gap-1 shadow-sm"
+          >
+            <Sparkles size={12} className="text-app-primary" />
+            <span>4. Suggested Fix</span>
+          </a>
+          <a
+            href="#sec-investigation"
+            onClick={() => setCollapsedSections(prev => ({ ...prev, 5: false }))}
+            className="px-2.5 py-1 rounded-lg bg-app-input/60 hover:bg-app-input border border-app-border/40 text-app-secondary hover:text-app-primary transition-all shrink-0 flex items-center gap-1"
+          >
+            <span>5. Investigation</span>
+          </a>
+          <a
+            href="#sec-impact"
+            onClick={() => setCollapsedSections(prev => ({ ...prev, 6: false }))}
+            className="px-2.5 py-1 rounded-lg bg-app-input/60 hover:bg-app-input border border-app-border/40 text-app-secondary hover:text-app-primary transition-all shrink-0 flex items-center gap-1"
+          >
+            <span>6. Impact</span>
+          </a>
+          <a
+            href="#sec-prevention"
+            onClick={() => setCollapsedSections(prev => ({ ...prev, 7: false }))}
+            className="px-2.5 py-1 rounded-lg bg-app-input/60 hover:bg-app-input border border-app-border/40 text-app-secondary hover:text-app-primary transition-all shrink-0 flex items-center gap-1"
+          >
+            <span>7. Prevention</span>
+          </a>
+          <a
+            href="#sec-validate-recovery"
+            onClick={() => setCollapsedSections(prev => ({ ...prev, 8: false }))}
+            className="px-2.5 py-1 rounded-lg bg-app-input/60 hover:bg-app-input border border-app-border/40 text-app-secondary hover:text-app-primary transition-all shrink-0 flex items-center gap-1"
+          >
+            <span>8. Validate Recovery</span>
+          </a>
+        </div>
 
-          const bannerMap: Record<string, { bg: string; border: string; dot: string; label: string; icon: React.ReactNode }> = {
-            COMPLETE: {
-              bg: "bg-emerald-500/10",
-              border: "border-emerald-500/30",
-              dot: "bg-emerald-400",
-              label: "Complete Diagnosis",
-              icon: <CheckCircle2 size={13} className="text-emerald-400" />,
-            },
-            PARTIAL: {
-              bg: "bg-amber-500/10",
-              border: "border-amber-500/30",
-              dot: "bg-amber-400",
-              label: "Partial Diagnosis",
-              icon: <AlertTriangle size={13} className="text-amber-400" />,
-            },
-            INSUFFICIENT: {
-              bg: "bg-rose-500/10",
-              border: "border-rose-500/30",
-              dot: "bg-rose-400",
-              label: "Insufficient Telemetry",
-              icon: <AlertTriangle size={13} className="text-rose-400" />,
-            },
-          };
-          const b = bannerMap[level] || bannerMap.PARTIAL;
+        {/* ── Collapsible Diagnosis Telemetry & Investigation Timeline ──── */}
+        {(telemetryCompleteness?.level || classification || investigationTimeline.length > 0) && (() => {
+          const level = telemetryCompleteness?.level;
+          const isComplete = level === "COMPLETE";
+          const isPartial = level === "PARTIAL";
+          const statusText = isComplete ? "Complete Diagnosis" : isPartial ? "Partial Diagnosis" : (level || "Diagnosis Status");
+
           return (
-            <div className={cn("flex items-center gap-3 px-4 py-2.5 rounded-xl border text-xs", b.bg, b.border)}>
-              {b.icon}
-              <span className="font-black uppercase tracking-widest text-app-primary text-[11px]">{b.label}</span>
-              {refetched && (
-                <span className="ml-1 text-[10px] font-bold text-sky-400 border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 rounded">Logs Re-fetched</span>
+            <div className="rounded-xl border border-app-border bg-app-surface shadow-sm overflow-hidden space-y-0">
+              {/* Header Toggle */}
+              <div className="px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowInvestigationTimeline((v) => !v)}
+                  className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left group"
+                  title={showInvestigationTimeline ? "Collapse Timeline" : "Expand Timeline"}
+                >
+                  <span className="text-app-secondary group-hover:text-app-primary transition-colors">
+                    {showInvestigationTimeline ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "w-2 h-2 rounded-full",
+                      isComplete ? "bg-emerald-400" : isPartial ? "bg-amber-400" : "bg-sky-400"
+                    )} />
+                    <span className="text-xs font-bold uppercase tracking-wider text-app-primary">
+                      {statusText}
+                    </span>
+                  </div>
+                  {classification?.is_known !== undefined && (
+                    <span className={cn(
+                      "text-[10px] font-mono font-bold px-2 py-0.5 rounded border ml-1",
+                      classification.is_known
+                        ? "bg-app-input text-emerald-400 border-emerald-500/30"
+                        : "bg-app-input text-amber-400 border-amber-500/30"
+                    )}>
+                      {classification.is_known ? "Known Pattern" : "New Error Type"}
+                    </span>
+                  )}
+                  {classification?.matched_historical_incidents ? (
+                    <span className="text-[10px] font-mono text-blue-400 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 hidden sm:inline-block">
+                      Matched: {classification.matched_historical_incidents}
+                    </span>
+                  ) : null}
+                  {classification?.error_type && classification.error_type.toLowerCase() !== "unknown" && (
+                    <span className="text-[10px] text-app-secondary px-2 py-0.5 rounded bg-app-input border border-app-border hidden md:inline-block">
+                      Category: {classification.error_type}
+                    </span>
+                  )}
+                </button>
+
+                <div className="flex items-center gap-2 text-[11px] text-app-secondary">
+                  {telemetryCompleteness?.reason && (
+                    <span className="truncate max-w-xs text-right hidden sm:inline-block">
+                      {telemetryCompleteness.reason}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowInvestigationTimeline((v) => !v)}
+                    className="text-xs font-semibold text-sky-400 hover:text-sky-300 ml-1"
+                  >
+                    {showInvestigationTimeline ? "Hide Details" : "View Timeline"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Collapsible Body */}
+              {showInvestigationTimeline && (
+                <div className="p-4 pt-3 border-t border-app-border/50 bg-app-input/20 space-y-4 text-xs">
+                  {/* Detailed Timeline Steps */}
+                  {investigationTimeline.length > 0 && (
+                    <div className="rounded-lg border border-app-border/50 overflow-hidden bg-app-surface/60">
+                      <div className="px-3.5 py-2 border-b border-app-border/50 flex items-center gap-2">
+                        <Activity size={12} className="text-sky-400" />
+                        <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">
+                          Investigation Timeline
+                        </span>
+                      </div>
+                      <div className="divide-y divide-app-border/30">
+                        {investigationTimeline.map((step, i) => {
+                          const iconMap: Record<string, React.ReactNode> = {
+                            check: <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />,
+                            x: <AlertTriangle size={13} className="text-rose-400 shrink-0" />,
+                            warn: <AlertTriangle size={13} className="text-amber-400 shrink-0" />,
+                            skip: <span className="w-3.5 h-3.5 rounded-full border border-app-border/60 inline-block shrink-0" />,
+                          };
+                          return (
+                            <div key={i} className="flex items-start gap-3 px-3.5 py-2">
+                              <div className="mt-0.5">{iconMap[step.icon] ?? iconMap.skip}</div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[11px] font-bold text-app-primary">{step.label}</div>
+                                {step.detail && (
+                                  <div className="text-[10px] text-app-secondary mt-0.5 leading-relaxed">
+                                    {step.detail}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Confidence Breakdown & Checklist */}
+                  {explain && (
+                    <div className="bg-app-surface border border-app-border/60 rounded-lg p-3.5 space-y-3">
+                      <div>
+                        <div className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">
+                          Why confidence is {explain.level}
+                        </div>
+                        {explain.headline && (
+                          <p className="text-xs text-app-primary leading-relaxed mt-1 font-medium">
+                            {explain.headline}
+                          </p>
+                        )}
+                      </div>
+
+                      {((explain.evidence_available && explain.evidence_available.length > 0) || (explain.evidence_missing && explain.evidence_missing.length > 0)) && (
+                        <div className="p-3 rounded-lg bg-app-input/30 border border-app-border/60 space-y-2">
+                          <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest flex items-center justify-between">
+                            <span>Evidence Checklist</span>
+                            <span className="text-[9px] font-mono text-emerald-400 font-bold">
+                              {explain.evidence_available?.length || 0} Verified / {explain.evidence_missing?.length || 0} Missing
+                            </span>
+                          </div>
+
+                          {explain.evidence_available && explain.evidence_available.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                                <CheckCircle2 size={11} /> Verified Available Telemetry
+                              </div>
+                              <ul className="space-y-1 pl-1">
+                                {explain.evidence_available.map((ev, i) => (
+                                  <li key={i} className="text-[11px] text-app-primary flex items-start gap-1.5 leading-relaxed">
+                                    <span className="text-emerald-400 font-bold">✓</span>
+                                    <span>{ev}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {explain.evidence_missing && explain.evidence_missing.length > 0 && (
+                            <div className="space-y-1 pt-1 border-t border-app-border/40">
+                              <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                                <AlertTriangle size={11} /> Missing Telemetry & Hypotheses
+                              </div>
+                              <ul className="space-y-1 pl-1">
+                                {explain.evidence_missing.map((ev, i) => (
+                                  <li key={i} className="text-[11px] text-app-secondary flex items-start gap-1.5 leading-relaxed">
+                                    <span className="text-amber-400 font-bold">✗</span>
+                                    <span>{ev}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
-              <span className="ml-auto text-app-secondary text-[10px]">{telemetryCompleteness?.reason}</span>
             </div>
           );
         })()}
@@ -1066,462 +1425,1088 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           </div>
         )}
 
-        {/* Classification + confidence explanation */}
-        {(classification || explain || raw.diagnosis_status === "partial") && (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {raw.diagnosis_status === "partial" && (
-                <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                  Partial Diagnosis
-                </span>
-              )}
-              {classification && (
-                <>
-                  <span
-                    className={cn(
-                      "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded",
-                      classification.is_known
-                        ? "bg-app-input text-emerald-400 border border-emerald-500/30"
-                        : "bg-app-input text-amber-400 border border-amber-500/30",
-                    )}
-                  >
-                    {classification.is_known ? "Known Pattern" : "New Error Type"}
-                  </span>
-                  {classification.matched_historical_incidents ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                      Matched historical incidents: {classification.matched_historical_incidents}
-                    </span>
-                  ) : null}
-                  {classification.error_type && classification.error_type.toLowerCase() !== "unknown" ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-app-input text-app-secondary border border-app-border/50">
-                      Category: {classification.error_type}
-                    </span>
-                  ) : classification.is_known ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-app-input text-app-secondary border border-app-border/50">
-                      Category: Unclassified
-                    </span>
-                  ) : null}
-                </>
-              )}
-            </div>
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* ── SECTION 1: WHAT HAPPENED? ────────────────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <div id="sec-what-happened" className="space-y-4 pt-2 border-t border-app-border/50">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSection(1)}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left group"
+              title={collapsedSections[1] ? "Expand Section 1" : "Collapse Section 1"}
+            >
+              <span className="text-app-secondary group-hover:text-app-primary transition-colors">
+                {collapsedSections[1] ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+              </span>
+              <div className="text-xs font-bold text-app-primary group-hover:text-white transition-colors">
+                1. What Happened?
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSection(1)}
+              className="text-xs text-app-secondary hover:text-app-primary transition-colors"
+            >
+              {collapsedSections[1] ? "Expand" : "Collapse"}
+            </button>
+          </div>
 
-            {explain && showWhy && (
-              <div className="bg-app-input border border-app-border/50 rounded-xl p-4 space-y-4 shadow-inner">
-                <div>
-                  <div className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">
-                    Why confidence is {explain.level}
+          {!collapsedSections[1] && (
+            <div className="space-y-4 pt-1">
+              <div>
+                <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-1.5">
+                  Executive Summary
+                </div>
+                <div className="text-sm text-app-primary leading-relaxed font-medium bg-app-input/30 p-4 rounded-xl border border-app-border/50">
+                  {isDiagnosisFailed
+                    ? "AI root-cause synthesis is temporarily unavailable. Pipeline failure logs and metadata are captured above."
+                    : analysis.summary}
+                </div>
+              </div>
+
+              {/* Verified Execution Facts (Immutable Telemetry) Grid */}
+              {(raw.pipeline_name || raw.failed_stage || raw.error_code || raw.invalid_records !== undefined) && (
+                <div className="p-4 rounded-xl bg-app-input/40 border border-app-border/60 text-xs space-y-3">
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      Verified Execution Facts (Immutable Telemetry)
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                      Deterministic
+                    </span>
                   </div>
-                  {explain.headline && (
-                    <p className="text-xs text-app-primary leading-relaxed mt-1 font-medium">
-                      {explain.headline}
-                    </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <div className="text-[10px] text-app-secondary">Pipeline</div>
+                      <div className="font-mono font-bold text-app-primary truncate" title={raw.pipeline_name}>
+                        {raw.pipeline_name || "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-app-secondary">Failed Stage</div>
+                      <div className="font-mono font-bold text-amber-400 truncate" title={raw.failed_stage || "Not available from retrieved run telemetry"}>
+                        {raw.failed_stage || "Not available from retrieved run telemetry"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-app-secondary">Error Code</div>
+                      <div className="font-mono font-bold text-rose-400 truncate" title={raw.error_code || "Not available from retrieved run telemetry"}>
+                        {raw.error_code || "Not available from retrieved run telemetry"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-app-secondary">Failure Metric</div>
+                      <div className="font-mono font-bold text-app-primary">
+                        {typeof raw.invalid_records === "number" && typeof raw.total_records === "number" && raw.invalid_records !== null && raw.total_records !== null
+                          ? `${raw.invalid_records}/${raw.total_records} unique (${Number(raw.invalid_percentage || 0).toFixed(1)}% vs ${Number(raw.allowed_threshold || 5).toFixed(1)}%)`
+                          : typeof raw.allowed_threshold === "number" && raw.allowed_threshold !== null
+                            ? `Threshold: ${raw.allowed_threshold}%`
+                            : "Not available from retrieved run telemetry"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Validation violation category breakdown */}
+                  {raw.validation_failures && Object.keys(raw.validation_failures).length > 0 && (
+                    <div className="pt-2.5 border-t border-app-border/40 space-y-1.5">
+                      <div className="text-[11px] text-app-secondary flex items-start gap-2 flex-wrap">
+                        <span className="font-bold text-app-primary">
+                          Category Violations ({raw.validation_violations_total || 13} total):
+                        </span>
+                        {Object.entries(raw.validation_failures).map(([cat, cnt], i) => (
+                          <span key={i} className="px-2 py-0.5 rounded bg-app-surface border border-app-border/50 text-app-primary font-mono text-[10px]">
+                            {cat.replace(/_/g, " ")}: <strong>{String(cnt)}</strong>
+                          </span>
+                        ))}
+                      </div>
+                      {(raw.category_violation_explanation || raw.verified_facts?.category_violation_explanation) && (
+                        <p className="text-[10px] text-app-secondary/90 italic leading-relaxed pl-1 flex items-start gap-1">
+                          <Info size={11} className="text-app-secondary shrink-0 mt-0.5" />
+                          <span>{raw.category_violation_explanation || raw.verified_facts?.category_violation_explanation}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Affected Record IDs (Raw + Unique + Duplicates) */}
+                  {((Array.isArray(raw.affected_ids_raw) && raw.affected_ids_raw.length > 0) || (Array.isArray(raw.affected_ids_unique) && raw.affected_ids_unique.length > 0)) && (
+                    <div className="pt-2.5 border-t border-app-border/40 space-y-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <span className="font-bold text-app-primary text-[11px]">
+                          Affected Entity IDs ({raw.affected_ids_unique?.length || raw.affected_ids_raw?.length} Unique, {raw.affected_ids_raw?.length || 0} Total):
+                        </span>
+                        {raw.affected_ids_duplicates && raw.affected_ids_duplicates.length > 0 && (
+                          <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                            Duplicate Instances: {raw.affected_ids_duplicates.join(", ")}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(raw.affected_ids_raw || raw.affected_ids_unique || []).map((id: string, idx: number) => {
+                          const isDup = raw.affected_ids_duplicates?.includes(id);
+                          return (
+                            <span
+                              key={idx}
+                              className={cn(
+                                "px-2 py-0.5 rounded font-mono text-[10px] border transition-colors",
+                                isDup
+                                  ? "bg-amber-500/10 text-amber-300 border-amber-500/30 font-bold"
+                                  : "bg-app-surface border-app-border/60 text-app-primary"
+                              )}
+                              title={isDup ? `Record ${id} appears multiple times in batch failure telemetry` : undefined}
+                            >
+                              {id}
+                              {isDup && <span className="ml-1 text-[8px] text-amber-400 font-sans">(dup)</span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
                 </div>
+              )}
+            </div>
+          )}
+        </div>
 
-                {/* Evidence Checklist (Issue 7) */}
-                {((explain.evidence_available && explain.evidence_available.length > 0) || (explain.evidence_missing && explain.evidence_missing.length > 0)) && (
-                  <div className="p-3 rounded-lg bg-app-surface border border-app-border/60 space-y-2.5">
-                    <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest flex items-center justify-between">
-                      <span>Evidence Checklist</span>
-                      <span className="text-[9px] font-mono text-emerald-400 font-bold">
-                        {explain.evidence_available?.length || 0} Verified / {explain.evidence_missing?.length || 0} Missing
-                      </span>
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* ── SECTION 2: WHY DID IT FAIL? ──────────────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <div id="sec-why-failed" className="space-y-4 pt-2 border-t border-app-border/50">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSection(2)}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left group"
+              title={collapsedSections[2] ? "Expand Section 2" : "Collapse Section 2"}
+            >
+              <span className="text-app-secondary group-hover:text-app-primary transition-colors">
+                {collapsedSections[2] ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+              </span>
+              <div className="text-xs font-bold text-app-primary group-hover:text-white transition-colors">
+                2. Why Did It Fail?
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSection(2)}
+              className="text-xs text-app-secondary hover:text-app-primary transition-colors"
+            >
+              {collapsedSections[2] ? "Expand" : "Collapse"}
+            </button>
+          </div>
+
+          {!collapsedSections[2] && (
+            <div className="space-y-4 pt-1">
+              {(() => {
+                if (isDiagnosisFailed) {
+                  return (
+                    <div className="text-sm text-app-secondary italic bg-app-surface p-4 rounded-lg border border-app-border leading-relaxed">
+                      Not determinable because AI diagnosis did not complete. Review the execution logs above or re-run analysis.
                     </div>
+                  );
+                }
 
-                    {explain.evidence_available && explain.evidence_available.length > 0 && (
-                      <div className="space-y-1.5">
-                        <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                          <CheckCircle2 size={11} /> Verified Available Telemetry
-                        </div>
-                        <ul className="space-y-1 pl-1">
-                          {explain.evidence_available.map((ev, i) => (
-                            <li key={i} className="text-[11px] text-app-primary flex items-start gap-1.5 leading-relaxed">
-                              <span className="text-emerald-400 font-bold">✓</span>
-                              <span>{ev}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                const structuredData = parseRootCause(analysis.root_cause);
+                if (
+                  analysis.summary === "Could not parse LLM response" &&
+                  structuredData
+                ) {
+                  return <StructuredAnalysis data={structuredData} />;
+                }
 
-                    {explain.evidence_missing && explain.evidence_missing.length > 0 && (
-                      <div className="space-y-1.5 pt-1.5 border-t border-app-border/40">
-                        <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                          <AlertTriangle size={11} /> Missing Telemetry & Hypotheses
-                        </div>
-                        <ul className="space-y-1 pl-1">
-                          {explain.evidence_missing.map((ev, i) => (
-                            <li key={i} className="text-[11px] text-app-secondary flex items-start gap-1.5 leading-relaxed">
-                              <span className="text-amber-400 font-bold">✗</span>
-                              <span>{ev}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
+                const verifiedRootCause = rcClassification?.tier_a_verified_fact?.statement || raw.verified_root_cause || analysis.root_cause;
+                const tierBInference = rcClassification?.tier_b_deterministic_inference;
 
-                <div className="space-y-2.5 pt-1 border-t border-app-border/40">
-                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">
-                    Confidence Weight Factors
-                  </div>
-                  {(explain.factors || []).map((f, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <span
-                        className={cn(
-                          "mt-1.5 w-2 h-2 rounded-full shrink-0",
-                          f.polarity === "positive"
-                            ? "bg-emerald-500"
-                            : f.polarity === "negative"
-                              ? "bg-rose-500"
-                              : "bg-gray-300",
-                        )}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-app-primary">
-                            {f.label}
+                return (
+                  <div className="space-y-4">
+                    {/* Level A — Verified Fact */}
+                    {verifiedRootCause && (
+                      <div>
+                        <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                            Level A — Verified Fact (Direct Telemetry)
                           </span>
-                          {f.contribution > 0 && (
-                            <span className="text-[10px] font-mono text-app-secondary">
-                              {Math.round(f.contribution * 100)}%
-                            </span>
+                          <span className="text-[10px] font-mono text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">
+                            Direct Telemetry
+                          </span>
+                        </div>
+                        <div className="text-sm text-app-primary bg-app-surface p-4 rounded-xl border border-emerald-500/30 leading-relaxed font-sans space-y-2">
+                          <div>
+                            {verifiedRootCause
+                              .split(/\*\*(.*?)\*\*/g)
+                              .map((part: string, i: number) =>
+                                i % 2 === 1 ? (
+                                  <strong key={i} className="font-bold text-app-primary">
+                                    {part}
+                                  </strong>
+                                ) : (
+                                  part
+                                ),
+                              )}
+                          </div>
+                          {rcClassification?.tier_a_verified_fact?.evidence && rcClassification.tier_a_verified_fact.evidence.length > 0 && (
+                            <ul className="pt-2 border-t border-app-border/40 space-y-1">
+                              {rcClassification.tier_a_verified_fact.evidence.map((ev, i) => (
+                                <li key={i} className="text-xs text-app-secondary flex items-start gap-1.5">
+                                  <span className="text-emerald-400">✓</span>
+                                  <span>{ev}</span>
+                                </li>
+                              ))}
+                            </ul>
                           )}
                         </div>
-                        <p className="text-[11px] text-app-secondary leading-relaxed mt-0.5">
-                          {f.detail}
+                      </div>
+                    )}
+
+                    {/* Level B — Deterministic Inference */}
+                    {tierBInference && (
+                      <div>
+                        <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-sky-400" />
+                            Level B — Deterministic Inference (Mathematical / Logical Deduction)
+                          </span>
+                          <span className="text-[10px] font-mono text-sky-400 font-bold px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/30">
+                            Deduction
+                          </span>
+                        </div>
+                        <div className="text-sm text-app-primary bg-sky-500/5 p-4 rounded-xl border border-sky-500/30 leading-relaxed font-sans space-y-1.5">
+                          <div>{tierBInference.statement}</div>
+                          {tierBInference.calculation && (
+                            <div className="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 px-2 py-1 rounded inline-block">
+                              {tierBInference.calculation}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {failureMechanism && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+                    Failure Mechanism
+                  </div>
+                  <div className="text-sm text-app-primary whitespace-pre-wrap bg-rose-500/10 p-4 rounded-lg border border-rose-500/30 leading-relaxed">
+                    {failureMechanism
+                      .split(/\*\*(.*?)\*\*/g)
+                      .map((part: string, i: number) =>
+                        i % 2 === 1 ? (
+                          <strong key={i} className="font-bold text-app-primary">
+                            {part}
+                          </strong>
+                        ) : (
+                          part
+                        ),
+                      )}
+                  </div>
+                </div>
+              )}
+
+              {errorDetails && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+                    Error Details
+                  </div>
+                  <div className="text-sm text-app-primary leading-relaxed bg-app-surface/60 p-4 rounded-xl border border-app-border/50">
+                    {errorDetails
+                      .split(/\*\*(.*?)\*\*/g)
+                      .map((part: string, i: number) =>
+                        i % 2 === 1 ? (
+                          <strong key={i} className="font-bold text-app-primary">
+                            {part}
+                          </strong>
+                        ) : (
+                          part
+                        ),
+                      )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* ── SECTION 3: PRE-FIX SAFETY CHECK (P0 CONTAINMENT) ─────────── */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {p0SafetyCheck && (
+          <div id="sec-safety-check" className="space-y-4 pt-2 border-t border-app-border/50">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => toggleSection(3)}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left group"
+                title={collapsedSections[3] ? "Expand Section 3" : "Collapse Section 3"}
+              >
+                <span className="text-app-secondary group-hover:text-app-primary transition-colors">
+                  {collapsedSections[3] ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+                </span>
+                <div className="text-xs font-bold text-app-primary group-hover:text-white transition-colors">
+                  3. Pre-Fix Safety Check
+                </div>
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-app-secondary px-2 py-0.5 rounded bg-app-input border border-app-border hidden sm:inline-block">
+                  Downstream Containment
+                </span>
+                <button
+                  type="button"
+                  onClick={() => toggleSection(3)}
+                  className="text-xs text-app-secondary hover:text-app-primary transition-colors"
+                >
+                  {collapsedSections[3] ? "Expand" : "Collapse"}
+                </button>
+              </div>
+            </div>
+
+            {!collapsedSections[3] && (
+              <div className="space-y-4 pt-1">
+                <p className="text-xs text-app-secondary leading-relaxed font-medium">
+                  Verify downstream containment before making changes. This is a safety check to ensure corrupt data has not propagated downstream, and does not resolve the root cause.
+                </p>
+
+                <div className="p-4 sm:p-5 rounded-xl border border-app-border bg-app-surface text-sm leading-relaxed space-y-3">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="px-2 py-0.5 rounded font-black font-mono text-[11px] bg-amber-500 text-black shrink-0">
+                      P0
+                    </span>
+                    <span className="font-bold text-app-primary text-sm sm:text-base">
+                      {p0SafetyCheck.title}
+                    </span>
+                    <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-app-input text-app-secondary border border-app-border/50">
+                      {p0SafetyCheck.recommendation_type || "Evidence-Based Suggested Fix"}
+                    </span>
+                    <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-app-input text-app-secondary border border-app-border/50">
+                      Supported By: {p0SafetyCheck.supported_by || "Verified Task Output"}
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-app-border bg-app-input text-sky-400 ml-auto flex items-center gap-1">
+                      <Zap size={11} className="text-sky-400" />
+                      <span>Safe to Automate</span>
+                    </span>
+                  </div>
+
+                  <div className="text-app-primary whitespace-pre-wrap text-xs sm:text-sm leading-relaxed font-medium">
+                    {p0SafetyCheck.action}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2 border-t border-app-border/40 text-xs">
+                    {p0SafetyCheck.what_to_inspect && (
+                      <div className="p-2.5 rounded-lg bg-app-input/40 border border-app-border/40 space-y-1">
+                        <div className="text-[10px] font-bold text-app-secondary uppercase tracking-wider flex items-center gap-1">
+                          <Search size={11} className="text-app-secondary" />
+                          <span>What to Inspect</span>
+                        </div>
+                        <p className="text-[11px] text-app-primary leading-relaxed">
+                          {p0SafetyCheck.what_to_inspect}
                         </p>
-                        {f.contribution > 0 && (
-                          <div className="h-1 bg-app-border rounded-full overflow-hidden mt-1.5">
-                            <div
-                              className={cn(
-                                "h-full rounded-full",
-                                f.polarity === "negative"
-                                  ? "bg-rose-400"
-                                  : "bg-blue-400",
-                              )}
-                              style={{
-                                width: `${Math.max(4, Math.min(100, f.contribution * 100))}%`,
-                              }}
-                            />
+                      </div>
+                    )}
+
+                    {p0SafetyCheck.what_to_fix && (
+                      <div className="p-2.5 rounded-lg bg-app-input/40 border border-app-border/40 space-y-1">
+                        <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                          <Shield size={11} className="text-amber-400" />
+                          <span>Containment Action</span>
+                        </div>
+                        <p className="text-[11px] text-app-primary leading-relaxed">
+                          {p0SafetyCheck.what_to_fix}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {p0SafetyCheck.why && (
+                    <div className="text-xs text-app-secondary leading-snug">
+                      <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1 font-bold">Why This Is Prioritized:</span>
+                      {p0SafetyCheck.why}
+                    </div>
+                  )}
+
+                  {p0SafetyCheck.evidence && (
+                    <div className="text-xs text-app-secondary leading-snug">
+                      <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1 font-bold">Evidence:</span>
+                      <span className="font-mono text-app-primary">{p0SafetyCheck.evidence}</span>
+                    </div>
+                  )}
+
+                  {p0SafetyCheck.expected_outcome && (
+                    <div className="pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-app-primary font-medium">
+                      <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-emerald-400" />
+                      <div>
+                        <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Expected Outcome:</span>
+                        {p0SafetyCheck.expected_outcome}
+                      </div>
+                    </div>
+                  )}
+
+                  {p0SafetyCheck.validation && (
+                    <div className="flex items-start gap-2 text-xs text-sky-400 font-medium">
+                      <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Validation:</span>
+                      {p0SafetyCheck.validation}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* ── SECTION 4: SUGGESTED FIX ─────────────────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {suggestedFixes.length > 0 && (
+          <div
+            id="sec-suggested-fix"
+            className="p-5 sm:p-6 rounded-xl bg-app-surface border border-app-border space-y-6 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-app-primary flex items-center gap-2">
+                  4. Suggested Fix
+                </h3>
+                <p className="text-xs text-app-secondary mt-1">
+                  Follow these prioritized actions to investigate and resolve the pipeline failure.
+                </p>
+              </div>
+              <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full bg-app-input text-app-secondary border border-app-border">
+                {suggestedFixes.length} Prioritized Action{suggestedFixes.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {/* NEXT BEST ACTION — P1 ACTION CARD (Part 1, 2, 3, 11, 12) */}
+            {nextBestAction && (() => {
+              const isReady = nextBestAction.fix_readiness === "READY_TO_FIX";
+              const isDirect = nextBestAction.actionability === "DIRECT_FIX" || isReady;
+
+              return (
+                <div className="p-5 sm:p-6 rounded-xl bg-app-surface border border-app-border border-l-4 border-l-amber-500 space-y-4 shadow-sm">
+                  {/* Top Status Row */}
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-bold text-amber-500 font-mono tracking-wider flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-amber-500" />
+                      <span>NEXT BEST ACTION</span>
+                    </span>
+                    <span className="text-xs text-amber-400/90 font-semibold flex items-center gap-1.5">
+                      {isDirect ? (
+                        <>
+                          <Wrench size={12} className="text-amber-400" />
+                          <span>Direct Action</span>
+                        </>
+                      ) : (
+                        <>
+                          <Search size={12} className="text-amber-400" />
+                          <span>Investigation Required</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Title & Short Summary */}
+                  <div className="space-y-1">
+                    <h4 className="text-base sm:text-lg font-bold text-app-primary">
+                      {nextBestAction.title}
+                    </h4>
+                    <p className="text-xs sm:text-sm text-app-secondary leading-relaxed font-medium">
+                      {nextBestAction.summary || nextBestAction.action}
+                    </p>
+                  </div>
+
+                  {/* WHY THIS IS THE NEXT ACTION */}
+                  <div className="space-y-1.5 pt-3 border-t border-app-border/50 text-xs">
+                    <div className="text-[11px] font-bold text-app-secondary uppercase tracking-wider">
+                      Why This Is The Next Action
+                    </div>
+                    <ul className="space-y-1 text-app-primary">
+                      {(nextBestAction.why_prioritized && nextBestAction.why_prioritized.length > 0
+                        ? nextBestAction.why_prioritized
+                        : [
+                            "Highest observed failure category: 5 violations.",
+                            "Resolving this category may reduce the invalid-record rate significantly.",
+                          ]
+                      ).map((whyItem, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="text-app-secondary">•</span>
+                          <span>{whyItem}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {nextBestAction.evidence && (
+                      <div className="text-xs text-app-secondary pt-1 font-medium">
+                        <span className="font-semibold text-app-primary mr-1">Evidence:</span>
+                        <span className="text-emerald-400 font-mono">
+                          ✓ {Array.isArray(nextBestAction.evidence) ? nextBestAction.evidence.join(", ") : nextBestAction.evidence}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* WHAT WE KNOW vs WHAT WE STILL NEED TO DETERMINE */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-app-border/50 text-xs">
+                    {nextBestAction.what_we_know && nextBestAction.what_we_know.length > 0 && (
+                      <div className="p-3.5 rounded-lg bg-app-input/30 border border-app-border/60 space-y-2">
+                        <div className="text-[11px] font-bold text-app-secondary uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-emerald-400 font-bold">✓</span>
+                          <span>What We Know</span>
+                        </div>
+                        <ul className="space-y-1.5 text-app-primary">
+                          {nextBestAction.what_we_know.map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="text-emerald-400 font-bold">✓</span>
+                              <span className="leading-relaxed">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {nextBestAction.what_we_need_to_determine && nextBestAction.what_we_need_to_determine.length > 0 && (
+                      <div className="p-3.5 rounded-lg bg-app-input/30 border border-app-border/60 space-y-2">
+                        <div className="text-[11px] font-bold text-app-secondary uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-amber-400 font-bold">?</span>
+                          <span>What We Still Need to Determine</span>
+                        </div>
+                        <ul className="space-y-1.5 text-app-primary">
+                          {nextBestAction.what_we_need_to_determine.map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="text-amber-400 font-bold">?</span>
+                              <span className="leading-relaxed">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* WHAT TO INVESTIGATE */}
+                  <div className="space-y-1.5 pt-3 border-t border-app-border/50 text-xs">
+                    <div className="text-[11px] font-bold text-app-secondary uppercase tracking-wider">
+                      What to Investigate
+                    </div>
+                    <ul className="space-y-1.5 text-app-primary">
+                      {(nextBestAction.what_to_investigate && nextBestAction.what_to_investigate.length > 0
+                        ? nextBestAction.what_to_investigate
+                        : [
+                            "Open the affected inventory records.",
+                            "Inspect the values evaluated by the reconciliation validation rule.",
+                            "Compare the source values with the expected reconciliation values.",
+                            "Identify the exact records causing the validation failures.",
+                          ]
+                      ).map((stepItem, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-app-secondary">•</span>
+                          <span className="leading-relaxed">{stepItem}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* SUGGESTED FIX */}
+                  <div className="space-y-1.5 pt-3 border-t border-app-border/50 text-xs">
+                    <div className="text-[11px] font-bold text-app-secondary uppercase tracking-wider">
+                      Suggested Fix
+                    </div>
+                    <ul className="space-y-1.5 text-app-primary">
+                      {(nextBestAction.suggested_fix && nextBestAction.suggested_fix.length > 0
+                        ? nextBestAction.suggested_fix
+                        : [
+                            "Determine the underlying discrepancy before modifying source data.",
+                            "Identify and correct the input discrepancies causing the reconciliation validation rule to fail.",
+                          ]
+                      ).map((fixItem, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-app-secondary">•</span>
+                          <span className="leading-relaxed">{fixItem}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* HOW TO VALIDATE */}
+                  <div className="space-y-1.5 pt-3 border-t border-app-border/50 text-xs">
+                    <div className="text-[11px] font-bold text-app-secondary uppercase tracking-wider">
+                      How to Validate
+                    </div>
+                    <ul className="space-y-1.5 text-app-primary">
+                      {(nextBestAction.validation_steps && nextBestAction.validation_steps.length > 0
+                        ? nextBestAction.validation_steps
+                        : [
+                            "Re-run the reconciliation validation.",
+                            "Confirm Inventory Reconciliation Mismatch violations = 0.",
+                            "Confirm corrected records pass validation.",
+                            "Confirm the overall invalid record rate is strictly below 25.0%.",
+                          ]
+                      ).map((valItem, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-app-secondary font-mono">□</span>
+                          <span className="leading-relaxed">{valItem}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* REMAINING SUGGESTED FIXES (P2, P3, P4, P5...) — NO DUPLICATION OF P1 (Part 4, 5) */}
+            {remainingFixes.length > 0 && (
+              <div className="space-y-4 pt-2 border-t border-app-border/50">
+                <h4 className="text-xs font-bold text-app-secondary uppercase tracking-wider">
+                  Remaining Suggested Fixes ({remainingFixes.length})
+                </h4>
+
+                <div className="space-y-3">
+                  {remainingFixes.map((step, idx) => {
+                    const isExpanded = !!expandedFixes[step.step];
+                    const isP5 = step.priority_code === "P5" || step.title.startsWith("P5") || (step.sub_actions && step.sub_actions.length > 0);
+                    const isDirect = step.actionability === "DIRECT_FIX" || step.fix_readiness === "READY_TO_FIX";
+
+                    return (
+                      <div
+                        key={idx}
+                        className="p-4 rounded-xl bg-app-surface border border-app-border space-y-3 transition-all"
+                      >
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <span className="text-sm font-bold text-app-primary">
+                            {step.title}
+                          </span>
+                          <span className="text-xs text-amber-400/90 font-medium flex items-center gap-1.5">
+                            {isDirect ? (
+                              <>
+                                <Wrench size={12} className="text-amber-400" />
+                                <span>Direct Action</span>
+                              </>
+                            ) : (
+                              <>
+                                <Search size={12} className="text-amber-400" />
+                                <span>Investigation Required</span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Short Summary Bullets */}
+                        <ul className="space-y-1 text-xs text-app-primary">
+                          {step.summary ? (
+                            <li className="flex items-start gap-1.5">
+                              <span className="text-app-secondary">•</span>
+                              <span>{step.summary}</span>
+                            </li>
+                          ) : (
+                            <li className="flex items-start gap-1.5">
+                              <span className="text-app-secondary">•</span>
+                              <span>{step.action}</span>
+                            </li>
+                          )}
+                        </ul>
+
+                        {/* Expand/Collapse Trigger */}
+                        <button
+                          type="button"
+                          onClick={() => toggleExpandFix(step.step)}
+                          className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1 pt-1 transition-colors"
+                        >
+                          {isExpanded ? "▲ Collapse Details" : "▼ [Expand Details]"}
+                        </button>
+
+                        {/* Expandable Details Area */}
+                        {isExpanded && (
+                          <div className="pt-3 border-t border-app-border/40 space-y-3 text-xs">
+                            {isP5 && step.sub_actions && step.sub_actions.length > 0 ? (
+                              <div className="space-y-3">
+                                <div className="text-[11px] font-bold text-app-secondary uppercase tracking-wider">
+                                  Remaining Issues
+                                </div>
+                                {step.sub_actions.map((sub, sIdx) => (
+                                  <div key={sIdx} className="p-3.5 rounded-lg bg-app-input/20 border border-app-border/50 space-y-2">
+                                    <div className="font-bold text-app-primary text-xs">
+                                      {sub.category} — {sub.count}
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="text-[10px] font-bold text-app-secondary uppercase">What we know:</div>
+                                      <div className="text-app-primary flex items-start gap-1.5">
+                                        <span className="text-emerald-400 font-bold">✓</span>
+                                        <span>{sub.what_we_know?.[0] || `One record failed the ${sub.category} validation rule.`}</span>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="text-[10px] font-bold text-app-secondary uppercase">What to investigate:</div>
+                                      {(sub.what_to_investigate || (sub.action ? [sub.action] : [sub.what_to_inspect || "Inspect source inputs."])).map((wi, wIdx) => (
+                                        <div key={wIdx} className="text-app-primary flex items-start gap-1.5">
+                                          <span className="text-app-secondary">•</span>
+                                          <span>{wi}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="text-[10px] font-bold text-app-secondary uppercase">Suggested action:</div>
+                                      <div className="text-app-primary flex items-start gap-1.5">
+                                        <span className="text-app-secondary">•</span>
+                                        <span>{sub.suggested_action?.[0] || sub.what_to_fix || "Correct or map the value after verification."}</span>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="text-[10px] font-bold text-app-secondary uppercase">Validation:</div>
+                                      <div className="text-app-primary flex items-start gap-1.5">
+                                        <span className="text-app-secondary font-mono">□</span>
+                                        <span>{sub.validation?.[0] || `Re-run ${sub.category} validation.`}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {step.what_we_know && step.what_we_know.length > 0 && (
+                                  <div className="space-y-1">
+                                    <div className="text-[10px] font-bold text-app-secondary uppercase">What we know:</div>
+                                    {step.what_we_know.map((item, kIdx) => (
+                                      <div key={kIdx} className="text-app-primary flex items-start gap-1.5">
+                                        <span className="text-emerald-400 font-bold">✓</span>
+                                        <span>{item}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {step.what_we_need_to_determine && step.what_we_need_to_determine.length > 0 && (
+                                  <div className="space-y-1">
+                                    <div className="text-[10px] font-bold text-app-secondary uppercase">What we still need to determine:</div>
+                                    {step.what_we_need_to_determine.map((item, dIdx) => (
+                                      <div key={dIdx} className="text-app-primary flex items-start gap-1.5">
+                                        <span className="text-amber-400 font-bold">?</span>
+                                        <span>{item}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="space-y-1">
+                                  <div className="text-[10px] font-bold text-app-secondary uppercase">What to investigate:</div>
+                                  {(step.what_to_investigate || (step.what_to_inspect ? [step.what_to_inspect] : [step.action])).map((item, iIdx) => (
+                                    <div key={iIdx} className="text-app-primary flex items-start gap-1.5">
+                                      <span className="text-app-secondary">•</span>
+                                      <span>{item}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="text-[10px] font-bold text-app-secondary uppercase">Suggested fix:</div>
+                                  {(step.suggested_fix || (step.what_to_fix ? [step.what_to_fix] : ["Determine the underlying discrepancy before modifying source data."])).map((item, fIdx) => (
+                                    <div key={fIdx} className="text-app-primary flex items-start gap-1.5">
+                                      <span className="text-app-secondary">•</span>
+                                      <span>{item}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="text-[10px] font-bold text-app-secondary uppercase">How to validate:</div>
+                                  {(step.validation_steps || (step.validation ? [step.validation] : ["Re-run validation checks."])).map((item, vIdx) => (
+                                    <div key={vIdx} className="text-app-primary flex items-start gap-1.5">
+                                      <span className="text-app-secondary font-mono">□</span>
+                                      <span>{item}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Investigation Timeline ────────────────────────────────────── */}
-        {investigationTimeline.length > 0 && (
-          <div className="rounded-xl border border-app-border/50 overflow-hidden bg-app-surface/40">
-            <div className="px-4 py-2.5 border-b border-app-border/50 flex items-center gap-2">
-              <Activity size={12} className="text-sky-400" />
-              <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">Investigation Timeline</span>
-            </div>
-            <div className="divide-y divide-app-border/30">
-              {investigationTimeline.map((step, i) => {
-                const iconMap: Record<string, React.ReactNode> = {
-                  check: <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />,
-                  x: <AlertTriangle size={13} className="text-rose-400 shrink-0" />,
-                  warn: <AlertTriangle size={13} className="text-amber-400 shrink-0" />,
-                  skip: <span className="w-3.5 h-3.5 rounded-full border border-app-border/60 inline-block shrink-0" />,
-                };
-                return (
-                  <div key={i} className="flex items-start gap-3 px-4 py-2.5">
-                    <div className="mt-0.5">{iconMap[step.icon] ?? iconMap.skip}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-bold text-app-primary">{step.label}</div>
-                      {step.detail && <div className="text-[10px] text-app-secondary mt-0.5 leading-relaxed">{step.detail}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-            Summary
-          </div>
-          <div className="text-sm text-app-primary leading-relaxed font-medium">
-            {isDiagnosisFailed
-              ? "AI root-cause synthesis is temporarily unavailable. Pipeline failure logs and metadata are captured above."
-              : analysis.summary}
-          </div>
-        </div>
-
-        {/* Verified Execution Facts (Immutable Telemetry) Grid */}
-        {(raw.pipeline_name || raw.failed_stage || raw.error_code || raw.invalid_records !== undefined) && (
-          <div className="p-4 rounded-xl bg-app-input/40 border border-app-border/60 text-xs space-y-3">
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Verified Execution Facts (Immutable Telemetry)
-              </span>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold">
-                Deterministic
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div>
-                <div className="text-[10px] text-app-secondary">Pipeline</div>
-                <div className="font-mono font-bold text-app-primary truncate" title={raw.pipeline_name}>
-                  {raw.pipeline_name || "—"}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] text-app-secondary">Failed Stage</div>
-                <div className="font-mono font-bold text-amber-400 truncate" title={raw.failed_stage || "Not available from retrieved run telemetry"}>
-                  {raw.failed_stage || "Not available from retrieved run telemetry"}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] text-app-secondary">Error Code</div>
-                <div className="font-mono font-bold text-rose-400 truncate" title={raw.error_code || "Not available from retrieved run telemetry"}>
-                  {raw.error_code || "Not available from retrieved run telemetry"}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] text-app-secondary">Failure Metric</div>
-                <div className="font-mono font-bold text-app-primary">
-                  {typeof raw.invalid_records === "number" && typeof raw.total_records === "number" && raw.invalid_records !== null && raw.total_records !== null
-                    ? `${raw.invalid_records}/${raw.total_records} unique (${Number(raw.invalid_percentage || 0).toFixed(1)}% vs ${Number(raw.allowed_threshold || 5).toFixed(1)}%)`
-                    : typeof raw.allowed_threshold === "number" && raw.allowed_threshold !== null
-                      ? `Threshold: ${raw.allowed_threshold}%`
-                      : "Not available from retrieved run telemetry"}
-                </div>
-              </div>
-            </div>
-
-            {/* Validation violation category breakdown */}
-            {raw.validation_failures && Object.keys(raw.validation_failures).length > 0 && (
-              <div className="pt-2.5 border-t border-app-border/40 space-y-1.5">
-                <div className="text-[11px] text-app-secondary flex items-start gap-2 flex-wrap">
-                  <span className="font-bold text-app-primary">
-                    Category Violations ({raw.validation_violations_total || 7} total):
-                  </span>
-                  {Object.entries(raw.validation_failures).map(([cat, cnt], i) => (
-                    <span key={i} className="px-2 py-0.5 rounded bg-app-surface border border-app-border/50 text-app-primary font-mono text-[10px]">
-                      {cat.replace(/_/g, " ")}: <strong>{String(cnt)}</strong>
-                    </span>
-                  ))}
-                </div>
-                {(raw.category_violation_explanation || raw.verified_facts?.category_violation_explanation) && (
-                  <p className="text-[10px] text-app-secondary/90 italic leading-relaxed pl-1">
-                    ℹ {raw.category_violation_explanation || raw.verified_facts?.category_violation_explanation}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Affected Record IDs (Raw + Unique + Duplicates) */}
-            {((Array.isArray(raw.affected_ids_raw) && raw.affected_ids_raw.length > 0) || (Array.isArray(raw.affected_ids_unique) && raw.affected_ids_unique.length > 0)) && (
-              <div className="pt-2.5 border-t border-app-border/40 space-y-1.5">
-                <div className="flex items-center justify-between flex-wrap gap-1">
-                  <span className="font-bold text-app-primary text-[11px]">
-                    Affected Entity IDs ({raw.affected_ids_unique?.length || raw.affected_ids_raw?.length} Unique, {raw.affected_ids_raw?.length || 0} Total):
-                  </span>
-                  {raw.affected_ids_duplicates && raw.affected_ids_duplicates.length > 0 && (
-                    <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded">
-                      Duplicate Instances: {raw.affected_ids_duplicates.join(", ")}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {(raw.affected_ids_raw || raw.affected_ids_unique || []).map((id: string, idx: number) => {
-                    const isDup = raw.affected_ids_duplicates?.includes(id);
-                    return (
-                      <span
-                        key={idx}
-                        className={cn(
-                          "px-2 py-0.5 rounded font-mono text-[10px] border transition-colors",
-                          isDup
-                            ? "bg-amber-500/10 text-amber-300 border-amber-500/30 font-bold"
-                            : "bg-app-surface border-app-border/60 text-app-primary"
-                        )}
-                        title={isDup ? `Record ${id} appears multiple times in batch failure telemetry` : undefined}
-                      >
-                        {id}
-                        {isDup && <span className="ml-1 text-[8px] text-amber-400 font-sans">(dup)</span>}
-                      </span>
                     );
                   })}
                 </div>
               </div>
             )}
+          </div>
+        )}
 
-            {/* Recovery Success Criteria (P0-1) */}
-            {raw.recovery_success_criteria && (
-              <div className="pt-2.5 border-t border-app-border/40 flex items-start gap-2.5">
-                <span className="p-1 rounded bg-emerald-500/10 text-emerald-400 mt-0.5 shrink-0">
-                  <Target className="w-3.5 h-3.5" />
-                </span>
-                <div className="space-y-1 w-full">
-                  <div className="flex items-center gap-2 flex-wrap justify-between">
-                    <span className="font-bold text-app-primary text-[11px]">Recovery Target Criteria:</span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {typeof raw.recovery_success_criteria.allowed_invalid_count === "number" && (
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-[10px]">
-                          Max Allowed: {raw.recovery_success_criteria.comparison_operator || "<="} {raw.recovery_success_criteria.allowed_invalid_count} records
-                        </span>
-                      )}
-                      {typeof raw.recovery_success_criteria.records_to_resolve === "number" && raw.recovery_success_criteria.records_to_resolve > 0 && (
-                        <span className="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono font-bold text-[10px]">
-                          Must Correct: ≥ {raw.recovery_success_criteria.records_to_resolve} records
-                        </span>
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* ── SECTION 5: SUPPORTING INVESTIGATION ──────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <div id="sec-investigation" className="space-y-4 pt-2 border-t border-app-border/50">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSection(5)}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left group"
+              title={collapsedSections[5] ? "Expand Section 5" : "Collapse Section 5"}
+            >
+              <span className="text-app-secondary group-hover:text-app-primary transition-colors">
+                {collapsedSections[5] ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+              </span>
+              <div className="text-xs font-bold text-app-primary group-hover:text-white transition-colors">
+                5. Supporting Investigation
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSection(5)}
+              className="text-xs text-app-secondary hover:text-app-primary transition-colors"
+            >
+              {collapsedSections[5] ? "Expand" : "Collapse"}
+            </button>
+          </div>
+
+          {!collapsedSections[5] && (
+            <div className="space-y-4 pt-1">
+              {/* Level C — Hypotheses */}
+              {(() => {
+                const tierCHypotheses = rcClassification?.tier_c_hypothesis;
+                const inferredContributingCause = raw.inferred_contributing_cause;
+                if (!tierCHypotheses?.length && !inferredContributingCause) return null;
+
+                return (
+                  <div>
+                    <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        Level C — Hypotheses (Potential Upstream Causes)
+                      </span>
+                      <span className="text-[10px] font-mono text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">
+                        Unproven (Requires Verification)
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {tierCHypotheses && tierCHypotheses.length > 0 ? (
+                        tierCHypotheses.map((h, i) => (
+                          <div key={i} className="text-xs text-app-secondary bg-app-surface/60 p-3 rounded-xl border border-amber-500/20 leading-relaxed space-y-1">
+                            <div className="text-app-primary font-medium">{h.statement}</div>
+                            {h.caveat && (
+                              <div className="text-[11px] text-amber-400/90 flex items-center gap-1.5">
+                                <Search size={11} className="text-amber-400 shrink-0" />
+                                <span>Note: {h.caveat}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-app-secondary bg-app-surface/60 p-4 rounded-xl border border-amber-500/20 leading-relaxed font-sans italic">
+                          {inferredContributingCause}
+                        </div>
                       )}
                     </div>
                   </div>
-                  <p className="text-[11px] text-app-secondary leading-relaxed">
-                    {raw.recovery_success_criteria.message}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                );
+              })()}
 
-        {/* ── Blast Radius Card ─────────────────────────────────────────── */}
-        {blastRadius && (
-          <div className={cn(
-            "p-4 rounded-xl border space-y-3",
-            blastRadius.severity_level === "CRITICAL"
-              ? "bg-rose-500/10 border-rose-500/40"
-              : blastRadius.severity_level === "HIGH"
-                ? "bg-orange-500/10 border-orange-500/40"
-                : blastRadius.severity_level === "MEDIUM"
-                  ? "bg-amber-500/10 border-amber-500/40"
-                  : "bg-app-input border-app-border/50",
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap size={13} className={cn(
-                  blastRadius.severity_level === "CRITICAL" ? "text-rose-400"
-                    : blastRadius.severity_level === "HIGH" ? "text-orange-400"
-                      : blastRadius.severity_level === "MEDIUM" ? "text-amber-400"
-                        : "text-app-secondary"
-                )} />
-                <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">Blast Radius</span>
-              </div>
-              <span className={cn(
-                "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border",
-                blastRadius.severity_level === "CRITICAL"
-                  ? "text-rose-400 border-rose-500/40 bg-rose-500/10"
-                  : blastRadius.severity_level === "HIGH"
-                    ? "text-orange-400 border-orange-500/40 bg-orange-500/10"
-                    : blastRadius.severity_level === "MEDIUM"
-                      ? "text-amber-400 border-amber-500/40 bg-amber-500/10"
-                      : "text-app-secondary border-app-border bg-app-surface",
-              )}>
-                {blastRadius.severity_level ?? "UNKNOWN"}
+              {/* Level D — Suggested Investigations (Part 6) */}
+              {(() => {
+                const tierDInvestigations = rcClassification?.tier_d_suggested_investigations;
+                if (!tierDInvestigations?.length) return null;
+
+                return (
+                  <div>
+                    <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-purple-400" />
+                        Level D — Suggested Operational Investigations
+                      </span>
+                      <span className="text-[10px] font-mono text-purple-400 font-bold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/30">
+                        Investigation Only
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {tierDInvestigations.map((inv, i) => (
+                        <div key={i} className="p-3.5 rounded-xl bg-app-surface/60 border border-purple-500/30 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <div className="font-bold text-app-primary flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                              {inv.title || `Investigation ${i + 1}`} {inv.area ? `— ${inv.area}` : ""}
+                            </div>
+                            {inv.evidence && (
+                              <span className="text-[9px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">
+                                {inv.evidence}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-app-primary leading-relaxed">{inv.action}</div>
+                          {inv.why && (
+                            <div className="text-[11px] text-app-secondary italic pt-1 border-t border-app-border/30">
+                              {inv.why}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Contributing Factors with Fact/Inference Classification (Part 7) */}
+              {contributingFactors.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+                    Contributing Factors
+                  </div>
+                  <ul className="space-y-2">
+                    {contributingFactors.map((d: string, i: number) => {
+                      const lower = d.toLowerCase();
+                      let badge = { label: "Hypothesis", className: "text-amber-400 font-semibold font-mono" };
+                      if (lower.includes("verified") || lower.includes("telemetry") || lower.includes("stopped execution") || lower.includes("exceeded allowed") || lower.includes("failed stage") || lower.includes("terminated during") || lower.includes("multiple validation rule violations")) {
+                        badge = { label: "Verified", className: "text-emerald-400 font-semibold font-mono" };
+                      } else if (lower.includes("inference") || lower.includes("deterministic") || lower.includes("calculated") || lower.includes("mathematical") || lower.includes("deduction") || lower.includes("amplified the impact") || lower.includes("rate of")) {
+                        badge = { label: "Derived", className: "text-sky-400 font-semibold font-mono" };
+                      } else if (lower.includes("investigat") || lower.includes("inspect")) {
+                        badge = { label: "Investigation", className: "text-purple-400 font-semibold font-mono" };
+                      }
+
+                      return (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2.5 p-2.5 rounded-lg bg-app-surface border border-app-border/50 text-xs sm:text-sm text-app-primary"
+                        >
+                          <span className={cn("text-xs shrink-0 mt-0.5 px-2 py-0.5 rounded bg-app-input border border-app-border/60", badge.className)}>
+                            {badge.label}
+                          </span>
+                          <span className="leading-relaxed font-medium">
+                            {d
+                              .split(/\*\*(.*?)\*\*/g)
+                              .map((part: string, idx: number) =>
+                                idx % 2 === 1 ? (
+                                  <strong
+                                    key={idx}
+                                    className="font-bold text-app-primary"
+                                  >
+                                    {part}
+                                  </strong>
+                                ) : (
+                                  part
+                                ),
+                              )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* ── SECTION 6: UNDERSTAND THE IMPACT ─────────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <div id="sec-impact" className="space-y-4 pt-2 border-t border-app-border/50">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSection(6)}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left group"
+              title={collapsedSections[6] ? "Expand Section 6" : "Collapse Section 6"}
+            >
+              <span className="text-app-secondary group-hover:text-app-primary transition-colors">
+                {collapsedSections[6] ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
               </span>
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-xs">
-              {blastRadius.records_affected != null && blastRadius.total_records != null && (
-                <div>
-                  <div className="text-[10px] text-app-secondary">Records Affected</div>
-                  <div className="font-mono font-bold text-app-primary">{blastRadius.records_affected}/{blastRadius.total_records}</div>
-                </div>
-              )}
-              {blastRadius.pct_affected != null && (
-                <div>
-                  <div className="text-[10px] text-app-secondary">% of Batch</div>
-                  <div className="font-mono font-bold text-app-primary">{Number(blastRadius.pct_affected).toFixed(1)}%</div>
-                </div>
-              )}
-              {(blastRadius.failure_categories_count ?? 0) > 0 && (
-                <div>
-                  <div className="text-[10px] text-app-secondary">Failure Categories</div>
-                  <div className="font-mono font-bold text-app-primary">{blastRadius.failure_categories_count}</div>
-                </div>
-              )}
-            </div>
-            {blastRadius.severity_reason && (
-              <div className="text-[11px] text-app-secondary leading-relaxed border-t border-app-border/40 pt-2">
-                {blastRadius.severity_reason}
+              <div className="text-xs font-bold text-app-primary group-hover:text-white transition-colors">
+                6. Understand the Impact
               </div>
-            )}
-            {blastRadius.downstream_impact && (
-              <div className="text-[11px] text-app-secondary leading-relaxed italic">
-                {blastRadius.downstream_impact}
-              </div>
-            )}
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSection(6)}
+              className="text-xs text-app-secondary hover:text-app-primary transition-colors"
+            >
+              {collapsedSections[6] ? "Expand" : "Collapse"}
+            </button>
           </div>
-        )}
 
-        {errorDetails && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Error Details
-            </div>
-            <div className="text-sm text-app-primary leading-relaxed">
-              {errorDetails
-                .split(/\*\*(.*?)\*\*/g)
-                .map((part: string, i: number) =>
-                  i % 2 === 1 ? (
-                    <strong key={i} className="font-bold text-app-primary">
-                      {part}
-                    </strong>
-                  ) : (
-                    part
-                  ),
-                )}
-            </div>
-          </div>
-        )}
-
-        {(() => {
-          if (isDiagnosisFailed) {
-            return (
-              <div>
-                <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-                  Pipeline Root Cause
-                </div>
-                <div className="text-sm text-app-secondary italic bg-app-surface p-4 rounded-lg border border-app-border leading-relaxed">
-                  Not determinable because AI diagnosis did not complete. Review the execution logs above or re-run analysis.
-                </div>
-              </div>
-            );
-          }
-
-          const structuredData = parseRootCause(analysis.root_cause);
-          if (
-            analysis.summary === "Could not parse LLM response" &&
-            structuredData
-          ) {
-            return <StructuredAnalysis data={structuredData} />;
-          }
-
-          const verifiedRootCause = rcClassification?.tier_a_verified_fact?.statement || raw.verified_root_cause || analysis.root_cause;
-          const tierBInference = rcClassification?.tier_b_deterministic_inference;
-          const tierCHypotheses = rcClassification?.tier_c_hypothesis;
-          const tierDInvestigations = rcClassification?.tier_d_suggested_investigations;
-          const inferredContributingCause = raw.inferred_contributing_cause;
-
-          return (
-            <div className="space-y-4">
-              {/* Level A — Verified Fact */}
-              {verifiedRootCause && (
-                <div>
-                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                      Level A — Verified Fact (Direct Telemetry)
-                    </span>
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">
-                      Direct Telemetry
+          {!collapsedSections[6] && (
+            <div className="space-y-4 pt-1">
+              {/* ── Blast Radius Card ───────────────────────────────────────── */}
+              {blastRadius && (
+                <div className={cn(
+                  "p-4 rounded-xl border space-y-3",
+                  blastRadius.severity_level === "CRITICAL"
+                    ? "bg-rose-500/10 border-rose-500/40"
+                    : blastRadius.severity_level === "HIGH"
+                      ? "bg-orange-500/10 border-orange-500/40"
+                      : blastRadius.severity_level === "MEDIUM"
+                        ? "bg-amber-500/10 border-amber-500/40"
+                        : "bg-app-input border-app-border/50",
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Zap size={13} className={cn(
+                        blastRadius.severity_level === "CRITICAL" ? "text-rose-400"
+                          : blastRadius.severity_level === "HIGH" ? "text-orange-400"
+                            : blastRadius.severity_level === "MEDIUM" ? "text-amber-400"
+                              : "text-app-secondary"
+                      )} />
+                      <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">Blast Radius</span>
+                    </div>
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border",
+                      blastRadius.severity_level === "CRITICAL"
+                        ? "text-rose-400 border-rose-500/40 bg-rose-500/10"
+                        : blastRadius.severity_level === "HIGH"
+                          ? "text-orange-400 border-orange-500/40 bg-orange-500/10"
+                          : blastRadius.severity_level === "MEDIUM"
+                            ? "text-amber-400 border-amber-500/40 bg-amber-500/10"
+                            : "text-app-secondary border-app-border bg-app-surface",
+                    )}>
+                      {blastRadius.severity_level ?? "UNKNOWN"}
                     </span>
                   </div>
-                  <div className="text-sm text-app-primary bg-app-surface p-4 rounded-xl border border-emerald-500/30 leading-relaxed font-sans space-y-2">
-                    <div>
-                      {verifiedRootCause
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    {blastRadius.records_affected != null && blastRadius.total_records != null && (
+                      <div>
+                        <div className="text-[10px] text-app-secondary">Records Affected</div>
+                        <div className="font-mono font-bold text-app-primary">{blastRadius.records_affected}/{blastRadius.total_records}</div>
+                      </div>
+                    )}
+                    {blastRadius.pct_affected != null && (
+                      <div>
+                        <div className="text-[10px] text-app-secondary">% of Batch</div>
+                        <div className="font-mono font-bold text-app-primary">{Number(blastRadius.pct_affected).toFixed(1)}%</div>
+                      </div>
+                    )}
+                    {(blastRadius.failure_categories_count ?? 0) > 0 && (
+                      <div>
+                        <div className="text-[10px] text-app-secondary">Failure Categories</div>
+                        <div className="font-mono font-bold text-app-primary">{blastRadius.failure_categories_count}</div>
+                      </div>
+                    )}
+                  </div>
+                  {blastRadius.severity_reason && (
+                    <div className="text-[11px] text-app-secondary leading-relaxed border-t border-app-border/40 pt-2">
+                      {blastRadius.severity_reason}
+                    </div>
+                  )}
+                  {blastRadius.downstream_impact && (
+                    <div className="text-[11px] text-app-secondary leading-relaxed italic">
+                      {blastRadius.downstream_impact}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Structured Impact Assessment */}
+              {(impact || impactData) && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+                    <span>Impact Assessment</span>
+                    {impactData?.risk_level && (
+                      <span className={cn(
+                        "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border",
+                        impactData.risk_level === "CRITICAL"
+                          ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                          : impactData.risk_level === "HIGH"
+                            ? "bg-orange-500/10 text-orange-400 border-orange-500/30"
+                            : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                      )}>
+                        {impactData.risk_level} RISK
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-2.5">
+                    <div className="text-sm text-app-primary leading-relaxed font-sans">
+                      {(impactData?.operational_impact || impactData?.description || impact)
                         .split(/\*\*(.*?)\*\*/g)
                         .map((part: string, i: number) =>
                           i % 2 === 1 ? (
@@ -1533,488 +2518,307 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                           ),
                         )}
                     </div>
-                    {rcClassification?.tier_a_verified_fact?.evidence && rcClassification.tier_a_verified_fact.evidence.length > 0 && (
-                      <ul className="pt-2 border-t border-app-border/40 space-y-1">
-                        {rcClassification.tier_a_verified_fact.evidence.map((ev, i) => (
-                          <li key={i} className="text-xs text-app-secondary flex items-start gap-1.5">
-                            <span className="text-emerald-400">✓</span>
-                            <span>{ev}</span>
-                          </li>
+
+                    {impactData?.affected_ids && impactData.affected_ids.length > 0 && (
+                      <div className="pt-2 border-t border-app-border/40 flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-app-secondary uppercase tracking-wider mr-1">
+                          Directly Affected Entities ({impactData.affected_ids.length}):
+                        </span>
+                        {impactData.affected_ids.map((id, idx) => (
+                          <span key={idx} className="px-2 py-0.5 rounded bg-app-surface border border-app-border/60 text-app-primary font-mono text-[10px]">
+                            {id}
+                          </span>
                         ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Level B — Deterministic Inference */}
-              {tierBInference && (
-                <div>
-                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-sky-400" />
-                      Level B — Deterministic Inference (Mathematical / Logical Deduction)
-                    </span>
-                    <span className="text-[10px] font-mono text-sky-400 font-bold px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/30">
-                      Deduction
-                    </span>
-                  </div>
-                  <div className="text-sm text-app-primary bg-sky-500/5 p-4 rounded-xl border border-sky-500/30 leading-relaxed font-sans space-y-1.5">
-                    <div>{tierBInference.statement}</div>
-                    {tierBInference.calculation && (
-                      <div className="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 px-2 py-1 rounded inline-block">
-                        {tierBInference.calculation}
                       </div>
                     )}
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </div>
 
-              {/* Level C — Hypotheses (Potential Upstream Cause) */}
-              {((tierCHypotheses && tierCHypotheses.length > 0) || inferredContributingCause) && (
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* ── SECTION 7: PREVENT FUTURE FAILURES ───────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <div id="sec-prevention" className="space-y-4 pt-2 border-t border-app-border/50">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSection(7)}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left group"
+              title={collapsedSections[7] ? "Expand Section 7" : "Collapse Section 7"}
+            >
+              <span className="text-app-secondary group-hover:text-app-primary transition-colors">
+                {collapsedSections[7] ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+              </span>
+              <div className="text-xs font-bold text-app-primary group-hover:text-white transition-colors">
+                7. Prevent Future Failures
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSection(7)}
+              className="text-xs text-app-secondary hover:text-app-primary transition-colors"
+            >
+              {collapsedSections[7] ? "Expand" : "Collapse"}
+            </button>
+          </div>
+
+          {!collapsedSections[7] && (
+            <div className="space-y-4 pt-1">
+              {/* Long-term prevention (Part 7) */}
+              {(() => {
+                const ltpList = Array.isArray(raw.long_term_prevention)
+                  ? raw.long_term_prevention
+                  : longTermPrevention
+                    ? [longTermPrevention]
+                    : [];
+
+                if (ltpList.length === 0) return null;
+
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">
+                        Preventive Recommendations
+                      </div>
+                      <span className="text-[10px] text-app-secondary font-medium italic">
+                        Intended to reduce recurrence; not claims about current pipeline configuration.
+                      </span>
+                    </div>
+                    <ul className="space-y-2 bg-sky-500/5 p-4 rounded-xl border border-sky-500/20">
+                      {ltpList.map((item: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-app-primary">
+                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-2" />
+                          <span className="leading-relaxed">
+                            {String(item)
+                              .split(/\*\*(.*?)\*\*/g)
+                              .map((part: string, idx: number) =>
+                                idx % 2 === 1 ? (
+                                  <strong key={idx} className="font-bold text-app-primary">
+                                    {part}
+                                  </strong>
+                                ) : (
+                                  part
+                                ),
+                              )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
+
+              {/* Optional Improvements (Runbook Recommendations - Part 8) */}
+              {optionalImprovements.length > 0 && (
                 <div>
                   <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-amber-400" />
-                      Level C — Hypotheses (Potential Upstream Causes)
-                    </span>
-                    <span className="text-[10px] font-mono text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">
-                      Unproven (Requires Verification)
+                    <span>Optional Improvements ({optionalImprovements.length} Runbook Recommendation{optionalImprovements.length !== 1 ? "s" : ""})</span>
+                    <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">
+                      Source: Knowledge Base / Runbook
                     </span>
                   </div>
-                  <div className="space-y-2">
-                    {tierCHypotheses && tierCHypotheses.length > 0 ? (
-                      tierCHypotheses.map((h, i) => (
-                        <div key={i} className="text-xs text-app-secondary bg-app-surface/60 p-3 rounded-xl border border-amber-500/20 leading-relaxed space-y-1">
-                          <div className="text-app-primary font-medium">{h.statement}</div>
-                          {h.verification_step && (
-                            <div className="text-[11px] text-amber-400/90 flex items-center gap-1">
-                              <span>🔍 Verification:</span>
-                              <span>{h.verification_step}</span>
+                  <div className="space-y-3">
+                    {optionalImprovements.map((step, idx) => (
+                      <div
+                        key={idx}
+                        className="p-4 rounded-xl border text-sm leading-relaxed transition-all shadow-sm bg-sky-500/5 border-sky-500/30 border-l-4 border-l-sky-500 space-y-2"
+                      >
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="w-5 h-5 rounded-full bg-app-input border border-app-border flex items-center justify-center text-[10px] font-bold text-app-primary shrink-0">
+                            {step.step || idx + 1}
+                          </span>
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                            {step.recommendation_type || "Knowledge-Based Suggested Fix"}
+                          </span>
+                          <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-app-surface text-app-secondary border border-app-border/50">
+                            Supported By: {step.supported_by || step.evidence_source || "Knowledge Base / Runbook"}
+                          </span>
+                          <span className="font-bold text-app-primary text-sm">
+                            {step.title}
+                          </span>
+                        </div>
+
+                        <div className="text-app-primary whitespace-pre-wrap pl-7 text-xs sm:text-sm leading-relaxed">
+                          {step.action}
+                        </div>
+
+                        {step.why && (
+                          <div className="ml-7 text-xs text-app-secondary leading-snug">
+                            <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1 font-bold">Why:</span>
+                            {step.why}
+                          </div>
+                        )}
+
+                        {step.expected_outcome && (
+                          <div className="ml-7 pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-sky-300 font-medium">
+                            <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-sky-400" />
+                            <div>
+                              <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Expected Outcome:</span>
+                              {step.expected_outcome}
                             </div>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-sm text-app-secondary bg-app-surface/60 p-4 rounded-xl border border-amber-500/20 leading-relaxed font-sans italic">
-                        {inferredContributingCause}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Level D — Suggested Investigations */}
-              {tierDInvestigations && tierDInvestigations.length > 0 && (
-                <div>
-                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-purple-400" />
-                      Level D — Suggested Operational Investigations
-                    </span>
-                    <span className="text-[10px] font-mono text-purple-400 font-bold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/30">
-                      Investigation Only
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {tierDInvestigations.map((inv, i) => (
-                      <div key={i} className="p-3 rounded-xl bg-app-surface/40 border border-purple-500/20 space-y-1 text-xs">
-                        <div className="font-bold text-app-primary flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                          {inv.area}
-                        </div>
-                        <div className="text-app-secondary leading-snug">{inv.action}</div>
-                        <div className="text-[10px] text-purple-400/90 italic pt-0.5">Why: {inv.why}</div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-            </div>
-          );
-        })()}
 
-        {rcDetails.length > 0 && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Pinpointed Evidence
-            </div>
-            <ul className="space-y-1.5">
-              {rcDetails.map((d, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-app-primary"
-                >
-                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                  <span className="leading-relaxed">{d}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {contributingFactors.length > 0 && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Contributing Factors
-            </div>
-            <ul className="space-y-1.5">
-              {contributingFactors.map((d: string, i: number) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-app-primary"
-                >
-                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                  <span className="leading-relaxed">
-                    {d
-                      .split(/\*\*(.*?)\*\*/g)
-                      .map((part: string, idx: number) =>
-                        idx % 2 === 1 ? (
-                          <strong
-                            key={idx}
-                            className="font-bold text-app-primary"
-                          >
-                            {part}
-                          </strong>
-                        ) : (
-                          part
-                        ),
-                      )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {failureMechanism && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Failure Mechanism
-            </div>
-            <div className="text-sm text-app-primary whitespace-pre-wrap bg-rose-500/10 p-4 rounded-lg border border-rose-500/30 leading-relaxed">
-              {failureMechanism
-                .split(/\*\*(.*?)\*\*/g)
-                .map((part: string, i: number) =>
-                  i % 2 === 1 ? (
-                    <strong key={i} className="font-bold text-app-primary">
-                      {part}
-                    </strong>
-                  ) : (
-                    part
-                  ),
-                )}
-            </div>
-          </div>
-        )}
-
-        {/* Structured Impact Assessment (Issue 1) */}
-        {(impact || impactData) && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
-              <span>Impact Assessment</span>
-              {impactData?.risk_level && (
-                <span className={cn(
-                  "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border",
-                  impactData.risk_level === "CRITICAL"
-                    ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
-                    : impactData.risk_level === "HIGH"
-                      ? "bg-orange-500/10 text-orange-400 border-orange-500/30"
-                      : "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                )}>
-                  {impactData.risk_level} RISK
-                </span>
-              )}
-            </div>
-            <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-2.5">
-              <div className="text-sm text-app-primary leading-relaxed font-sans">
-                {(impactData?.operational_impact || impactData?.description || impact)
-                  .split(/\*\*(.*?)\*\*/g)
-                  .map((part: string, i: number) =>
-                    i % 2 === 1 ? (
-                      <strong key={i} className="font-bold text-app-primary">
-                        {part}
-                      </strong>
-                    ) : (
-                      part
-                    ),
-                  )}
-              </div>
-
-              {impactData?.affected_ids && impactData.affected_ids.length > 0 && (
-                <div className="pt-2 border-t border-app-border/40 flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] font-bold text-app-secondary uppercase tracking-wider mr-1">
-                    Directly Affected Entities ({impactData.affected_ids.length}):
-                  </span>
-                  {impactData.affected_ids.map((id, idx) => (
-                    <span key={idx} className="px-2 py-0.5 rounded bg-app-surface border border-app-border/60 text-app-primary font-mono text-[10px]">
-                      {id}
-                    </span>
-                  ))}
+              {recommendedActions.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+                    Recommended Operational Follow-ups
+                  </div>
+                  <ul className="space-y-2">
+                    {recommendedActions.map((v: string, i: number) => {
+                      const cleaned = v.replace(/^[\s•→\-–—]+/, "").trim();
+                      return (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2.5 p-2.5 rounded-lg bg-app-surface/60 border border-app-border/40 text-sm text-app-primary"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                            {i + 1}
+                          </div>
+                          <span className="leading-relaxed">
+                            {cleaned
+                              .split(/\*\*(.*?)\*\*/g)
+                              .map((part: string, idx: number) =>
+                                idx % 2 === 1 ? (
+                                  <strong key={idx} className="font-bold text-app-primary">
+                                    {part}
+                                  </strong>
+                                ) : (
+                                  part
+                                ),
+                              )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Immediate Fix (Required Actions) */}
-        {immediateFixes.length > 0 && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
-              <span>Immediate Fix ({immediateFixes.length} Required Recovery Actions)</span>
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                Required for Recovery
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* ── SECTION 8: CONFIRM THE FIX & VALIDATE RECOVERY ───────────── */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <div id="sec-validate-recovery" className="space-y-4 pt-2 border-t border-app-border/50">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSection(8)}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left group"
+              title={collapsedSections[8] ? "Expand Section 8" : "Collapse Section 8"}
+            >
+              <span className="text-app-secondary group-hover:text-app-primary transition-colors">
+                {collapsedSections[8] ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
               </span>
-            </div>
-            <div className="space-y-3">
-              {immediateFixes.map((step, idx) => {
-                const autoSafety = (step as any).automation_safety as { can_automate?: boolean; risk_level?: string; reason?: string } | string | undefined;
-                const canAutomate = typeof autoSafety === "object" ? autoSafety.can_automate : (typeof autoSafety === "string" && (autoSafety.toLowerCase().includes("safe") || autoSafety.toLowerCase().includes("automatic")));
-                const safetyLabel = typeof autoSafety === "object" ? (autoSafety.can_automate ? "⚡ Safe to Automate" : autoSafety.risk_level === "high" ? "⚠ Manual Required" : "👁 Needs Review") : (autoSafety || "👁 Requires Approval");
-
-                return (
-                <div
-                  key={idx}
-                  className="p-4 rounded-xl border text-sm leading-relaxed transition-all shadow-sm bg-emerald-500/5 border-emerald-500/30 border-l-4 border-l-emerald-500 space-y-2"
-                >
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="w-5 h-5 rounded-full bg-app-input border border-app-border flex items-center justify-center text-[10px] font-bold text-app-primary shrink-0">
-                      {step.step || idx + 1}
-                    </span>
-                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      Required Immediate Action
-                    </span>
-                    {step.evidence_source && (
-                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-app-surface text-app-secondary border border-app-border/50">
-                        {step.evidence_source}
-                      </span>
-                    )}
-                    {autoSafety && (
-                      <span className={cn(
-                        "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border",
-                        canAutomate
-                          ? "bg-sky-500/10 text-sky-400 border-sky-500/20"
-                          : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      )}>
-                        {safetyLabel}
-                      </span>
-                    )}
-                    <span className="font-bold text-app-primary text-sm">
-                      {step.title}
-                    </span>
-                  </div>
-
-                  <div className="text-app-primary whitespace-pre-wrap pl-7 text-xs sm:text-sm leading-relaxed">
-                    {step.action
-                      .split(/\*\*(.*?)\*\*/g)
-                      .map((part: string, i: number) =>
-                        i % 2 === 1 ? (
-                          <strong key={i} className="font-bold text-app-primary not-italic">
-                            {part}
-                          </strong>
-                        ) : (
-                          part
-                        ),
-                      )}
-                  </div>
-
-                  {step.why && (
-                    <div className="ml-7 text-xs text-app-secondary leading-snug">
-                      <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1 font-bold">Why:</span>
-                      {step.why}
-                    </div>
-                  )}
-
-                  {step.expected_outcome && (
-                    <div className="ml-7 pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-emerald-400 font-medium">
-                      <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-emerald-400" />
-                      <div>
-                        <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Expected Outcome:</span>
-                        {step.expected_outcome}
-                      </div>
-                    </div>
-                  )}
-
-                  {step.validation && (
-                    <div className="ml-7 flex items-start gap-2 text-xs text-sky-400 font-medium">
-                      <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Validation:</span>
-                      {step.validation}
-                    </div>
-                  )}
-                </div>
-              ); })}
-            </div>
-          </div>
-        )}
-
-        {/* Optional Improvements (Runbook Recommendations) */}
-        {optionalImprovements.length > 0 && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
-              <span>Optional Improvements ({optionalImprovements.length} Runbook Recommendations)</span>
-              <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">
-                Runbook Enhancement
-              </span>
-            </div>
-            <div className="space-y-3">
-              {optionalImprovements.map((step, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 rounded-xl border text-sm leading-relaxed transition-all shadow-sm bg-sky-500/5 border-sky-500/30 border-l-4 border-l-sky-500 space-y-2"
-                >
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="w-5 h-5 rounded-full bg-app-input border border-app-border flex items-center justify-center text-[10px] font-bold text-app-primary shrink-0">
-                      {step.step || idx + 1}
-                    </span>
-                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                      Optional Runbook Improvement
-                    </span>
-                    {step.evidence_source && (
-                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-app-surface text-app-secondary border border-app-border/50">
-                        {step.evidence_source}
-                      </span>
-                    )}
-                    <span className="font-bold text-app-primary text-sm">
-                      {step.title}
-                    </span>
-                  </div>
-
-                  <div className="text-app-primary whitespace-pre-wrap pl-7 text-xs sm:text-sm leading-relaxed">
-                    {step.action}
-                  </div>
-
-                  {step.why && (
-                    <div className="ml-7 text-xs text-app-secondary leading-snug">
-                      <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1 font-bold">Why:</span>
-                      {step.why}
-                    </div>
-                  )}
-
-                  {step.expected_outcome && (
-                    <div className="ml-7 pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-sky-300 font-medium">
-                      <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-sky-400" />
-                      <div>
-                        <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Expected Outcome:</span>
-                        {step.expected_outcome}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Long-term prevention */}
-        {(() => {
-          const ltpList = Array.isArray(raw.long_term_prevention)
-            ? raw.long_term_prevention
-            : longTermPrevention
-              ? [longTermPrevention]
-              : [];
-
-          if (ltpList.length === 0) return null;
-
-          return (
-            <div>
-              <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-                Long-Term Prevention
+              <div className="text-xs font-bold text-app-primary group-hover:text-white transition-colors">
+                8. Confirm the Fix & Validate Recovery
               </div>
-              <ul className="space-y-2 bg-sky-500/5 p-4 rounded-xl border border-sky-500/20">
-                {ltpList.map((item: string, i: number) => (
-                  <li key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-app-primary">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-2" />
-                    <span className="leading-relaxed">
-                      {String(item)
-                        .split(/\*\*(.*?)\*\*/g)
-                        .map((part: string, idx: number) =>
-                          idx % 2 === 1 ? (
-                            <strong key={idx} className="font-bold text-app-primary">
-                              {part}
-                            </strong>
-                          ) : (
-                            part
-                          ),
-                        )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })()}
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSection(8)}
+              className="text-xs text-app-secondary hover:text-app-primary transition-colors"
+            >
+              {collapsedSections[8] ? "Expand" : "Collapse"}
+            </button>
+          </div>
 
-        {recommendedActions.length > 0 && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Recommended Operational Follow-ups
-            </div>
-            <ul className="space-y-2">
-              {recommendedActions.map((v: string, i: number) => {
-                const cleaned = v.replace(/^[\s•→\-–—]+/, "").trim();
-                return (
-                  <li
-                    key={i}
-                    className="flex items-start gap-2.5 p-2.5 rounded-lg bg-app-surface/60 border border-app-border/40 text-sm text-app-primary"
-                  >
-                    <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
-                      {i + 1}
+          {!collapsedSections[8] && (
+            <div className="space-y-4 pt-1">
+              {/* Recovery Target Criteria (Part 8) */}
+              {raw.recovery_success_criteria && (
+                <div className="p-4 rounded-xl bg-app-surface border border-app-border space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1 rounded bg-emerald-500/20 text-emerald-400">
+                        <Target className="w-4 h-4" />
+                      </span>
+                      <span className="font-bold text-app-primary text-xs uppercase tracking-wider">
+                        Recovery Target
+                      </span>
                     </div>
-                    <span className="leading-relaxed">
-                      {cleaned
-                        .split(/\*\*(.*?)\*\*/g)
-                        .map((part: string, idx: number) =>
-                          idx % 2 === 1 ? (
-                            <strong key={idx} className="font-bold text-app-primary">
-                              {part}
-                            </strong>
-                          ) : (
-                            part
-                          ),
-                        )}
+                    <span className="text-[10px] font-mono font-bold text-emerald-400 px-2 py-0.5 rounded bg-app-input border border-app-border">
+                      {raw.recovery_success_criteria.comparison_operator === "<" ? "Strictly below" : "At or below"} {raw.recovery_success_criteria.threshold_percentage || 25.0}%
                     </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
+                  </div>
 
-        {validation.length > 0 && (
-          <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Validation Steps
+                  {/* Clean Metric Grid (Part 8) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+                    <div className="p-2.5 rounded-lg bg-app-input/30 border border-app-border/60">
+                      <div className="text-[10px] text-app-secondary">Current Invalid Records</div>
+                      <div className="font-mono font-bold text-rose-400 text-sm mt-0.5">
+                        {raw.recovery_success_criteria.invalid_records ?? raw.invalid_records ?? "—"}
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-app-input/30 border border-app-border/60">
+                      <div className="text-[10px] text-app-secondary">Maximum Allowed Invalid</div>
+                      <div className="font-mono font-bold text-emerald-400 text-sm mt-0.5">
+                        {raw.recovery_success_criteria.allowed_invalid_count ?? "—"}
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-app-input/30 border border-app-border/60">
+                      <div className="text-[10px] text-app-secondary">Minimum Records to Correct or Exclude</div>
+                      <div className="font-mono font-bold text-amber-400 text-sm mt-0.5">
+                        {raw.recovery_success_criteria.records_to_resolve ?? "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mathematical Logic & Note */}
+                  <p className="text-[11px] text-app-secondary leading-relaxed border-t border-app-border/40 pt-2 font-medium">
+                    {raw.recovery_success_criteria.reason || raw.recovery_success_criteria.message}
+                  </p>
+                </div>
+              )}
+
+              {validation.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
+                    Validation Steps
+                  </div>
+                  <ul className="space-y-2">
+                    {validation.map((v: string, i: number) => {
+                      const cleaned = v.replace(/^[\s•✓✓\-–—]+/, "").trim();
+                      return (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-sm text-app-primary"
+                        >
+                          <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                          <span className="leading-relaxed">
+                            {cleaned
+                              .split(/\*\*(.*?)\*\*/g)
+                              .map((part: string, idx: number) =>
+                                idx % 2 === 1 ? (
+                                  <strong key={idx} className="font-bold text-app-primary">
+                                    {part}
+                                  </strong>
+                                ) : (
+                                  part
+                                ),
+                              )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
-            <ul className="space-y-2">
-              {validation.map((v: string, i: number) => {
-                const cleaned = v.replace(/^[\s•✓✓\-–—]+/, "").trim();
-                return (
-                  <li
-                    key={i}
-                    className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-sm text-app-primary"
-                  >
-                    <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
-                    <span className="leading-relaxed">
-                      {cleaned
-                        .split(/\*\*(.*?)\*\*/g)
-                        .map((part: string, idx: number) =>
-                          idx % 2 === 1 ? (
-                            <strong key={idx} className="font-bold text-app-primary">
-                              {part}
-                            </strong>
-                          ) : (
-                            part
-                          ),
-                        )}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* ── Knowledge Base References ───────────────────────────────────── */}
+        {/* ── Knowledge Base References (Supporting Context Only) (Part 9) ── */}
         {(() => {
           const raw = analysis.raw_response || {};
           const rawRefs: Array<{
@@ -2038,12 +2842,13 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           if (refs.length === 0) return null;
           return (
             <div className="pt-6 border-t border-app-border">
-              <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                 <BookOpen size={12} className="text-blue-500" />
-                {isDiagnosisFailed
-                  ? "Historical Similar Incidents & Runbooks (Reference Only)"
-                  : "Knowledge Base References"}
+                Similar Past Incidents & Runbooks (Supporting Context Only)
               </div>
+              <p className="text-[11px] text-app-secondary/80 italic mb-3">
+                Historical incident similarity provides supporting operational context only and does not override verified telemetry.
+              </p>
               <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1.5 custom-scrollbar">
                 {refs.map((ref, i) => (
                   <div

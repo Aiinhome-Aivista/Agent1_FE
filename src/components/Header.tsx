@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Moon, Sun, Activity, Brain, Settings, Zap, Plus, LogOut, Monitor, Check } from 'lucide-react';
+import { Moon, Sun, Activity, Brain, Settings, Zap, Plus, LogOut, Monitor, Check, ChevronDown, User, ShieldCheck } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { cn } from '../lib/utils';
 import { auth } from '../services/api';
@@ -12,8 +12,7 @@ interface Props {
   onConnect?: () => void;
 }
 
-function UserMenu() {
-  const [showMenu, setShowMenu] = React.useState(false);
+function ThemeToggle() {
   const [theme, setTheme] = React.useState<'light' | 'dark' | 'system'>(() => {
     return (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system';
   });
@@ -39,65 +38,112 @@ function UserMenu() {
 
   const isDarkCurrent = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
+  const toggleTheme = () => {
+    setTheme(isDarkCurrent ? 'light' : 'dark');
+  };
+
+  return (
+    <Tooltip title={`Switch to ${isDarkCurrent ? 'Light' : 'Dark'} Mode`} side="bottom">
+      <button
+        onClick={toggleTheme}
+        aria-label="Toggle Theme"
+        className="p-2 rounded-xl border border-app-border bg-app-surface hover:bg-app-bg text-app-secondary hover:text-app-primary transition-all shadow-sm active:scale-95 flex items-center justify-center"
+      >
+        {isDarkCurrent ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+      </button>
+    </Tooltip>
+  );
+}
+
+function UserAccountMenu() {
+  const [showMenu, setShowMenu] = React.useState(false);
+  const user = auth.getUser();
+  const email = user?.email || "admin@dataops.local";
+  const role = (user?.role || "ADMIN").toUpperCase();
+  const initial = (email[0] || "A").toUpperCase();
+  const displayName = email.includes("@") ? email.split("@")[0] : email;
+
   return (
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
+        aria-expanded={showMenu}
         className={cn(
-          "p-2 rounded-xl transition-colors",
-          showMenu ? "bg-rose-50 text-rose-500 border border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20" : "bg-app-surface border border-app-border hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 dark:hover:bg-rose-500/10 dark:hover:border-rose-500/20 text-app-secondary"
+          "flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all shadow-sm text-left",
+          showMenu
+            ? "bg-app-surface border-app-brand/60 ring-2 ring-app-brand/20"
+            : "bg-app-surface border-app-border hover:bg-app-bg hover:border-app-border"
         )}
       >
-        {isDarkCurrent ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+        {/* Avatar badge */}
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-app-brand to-rose-400 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">
+          {initial}
+        </div>
+
+        {/* User metadata */}
+        <div className="hidden sm:flex flex-col leading-none">
+          <span className="text-xs font-bold text-app-primary truncate max-w-[120px]">
+            {displayName}
+          </span>
+          <span className="text-[9px] font-mono uppercase tracking-wider text-app-secondary font-medium mt-0.5">
+            {role}
+          </span>
+        </div>
+
+        <ChevronDown size={13} className={cn("text-app-secondary transition-transform duration-200", showMenu && "rotate-180")} />
       </button>
 
       {showMenu && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-          <div className="absolute right-0 top-full mt-2 w-48 bg-app-surface border border-app-border rounded-xl shadow-lg py-1.5 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-            <button
-              onClick={() => { setTheme('light'); setShowMenu(false); }}
-              className="w-full flex items-center justify-between px-4 py-2 text-[13px] font-medium text-app-primary hover:bg-app-bg transition-colors"
-            >
+          <div className="absolute right-0 top-full mt-2 w-64 bg-app-surface border border-app-border rounded-xl shadow-xl py-2 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+            {/* Account Info Header */}
+            <div className="px-4 py-3 border-b border-app-border bg-app-input/30">
               <div className="flex items-center gap-3">
-                <Sun className="w-4 h-4 text-app-secondary" />
-                <span>Light</span>
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-app-brand to-rose-400 text-white font-bold text-sm flex items-center justify-center shadow-sm shrink-0">
+                  {initial}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-app-primary truncate" title={email}>
+                    {email}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="text-[10px] font-mono font-semibold text-emerald-400 uppercase tracking-wider">
+                      {role} • Authenticated
+                    </span>
+                  </div>
+                </div>
               </div>
-              {theme === 'light' && <Check className="w-3.5 h-3.5 text-app-brand" />}
-            </button>
-            <button
-              onClick={() => { setTheme('dark'); setShowMenu(false); }}
-              className="w-full flex items-center justify-between px-4 py-2 text-[13px] font-medium text-app-primary hover:bg-app-bg transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Moon className="w-4 h-4 text-app-secondary" />
-                <span>Dark</span>
+            </div>
+
+            {/* Quick Session Stats */}
+            <div className="px-4 py-2.5 text-[11px] space-y-1.5 text-app-secondary">
+              <div className="flex items-center justify-between">
+                <span>Cluster Access</span>
+                <span className="font-mono text-app-primary font-medium">Full Control</span>
               </div>
-              {theme === 'dark' && <Check className="w-3.5 h-3.5 text-app-brand" />}
-            </button>
-            <button
-              onClick={() => { setTheme('system'); setShowMenu(false); }}
-              className="w-full flex items-center justify-between px-4 py-2 text-[13px] font-medium text-app-primary hover:bg-app-bg transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Monitor className="w-4 h-4 text-app-secondary" />
-                <span>System</span>
+              <div className="flex items-center justify-between">
+                <span>Environment</span>
+                <span className="font-mono text-app-primary font-medium">Production</span>
               </div>
-              {theme === 'system' && <Check className="w-3.5 h-3.5 text-app-brand" />}
-            </button>
-            
-            <div className="h-px bg-app-border my-1.5" />
-            
-            <button
-              onClick={() => {
-                auth.clearToken();
-                window.location.href = "/";
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2 text-[13px] font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors text-left"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
+            </div>
+
+            <div className="h-px bg-app-border my-1" />
+
+            {/* Sign Out Button */}
+            <div className="p-1">
+              <button
+                onClick={() => {
+                  auth.clearToken();
+                  window.location.href = "/";
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-all text-left group"
+              >
+                <LogOut className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
+                <span>Sign Out</span>
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -221,7 +267,8 @@ export function Header({ title, subtitle, actions, onConnect }: Props) {
             </span>
           </div>
         </Tooltip>
-        <UserMenu />
+        <ThemeToggle />
+        <UserAccountMenu />
       </div>
     </header>
   );

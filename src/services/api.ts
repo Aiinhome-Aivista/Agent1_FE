@@ -29,11 +29,24 @@ import type {
 
 const BASE = "/api/v1";
 const TOKEN_KEY = "auth_token";
+const USER_KEY = "auth_user";
 
 export const auth = {
   getToken: () => localStorage.getItem(TOKEN_KEY),
   setToken: (t: string) => localStorage.setItem(TOKEN_KEY, t),
-  clearToken: () => localStorage.removeItem(TOKEN_KEY),
+  getUser: () => {
+    try {
+      const u = localStorage.getItem(USER_KEY);
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  },
+  setUser: (u: any) => localStorage.setItem(USER_KEY, JSON.stringify(u)),
+  clearToken: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  },
   isAuthed: () => !!localStorage.getItem(TOKEN_KEY),
 };
 

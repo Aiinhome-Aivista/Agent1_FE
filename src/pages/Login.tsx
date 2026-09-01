@@ -18,6 +18,11 @@ export function LoginPage() {
     try {
       const res = await api.login(email, password);
       auth.setToken(res.access_token);
+      if (res.user) {
+        auth.setUser(res.user);
+      } else {
+        auth.setUser({ email, role: "ADMIN" });
+      }
       nav("/app");
     } catch (e: any) {
       setErr(e.message || "login failed");

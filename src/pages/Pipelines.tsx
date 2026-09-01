@@ -83,35 +83,45 @@ export function PipelinesPage() {
     handleRefresh();
   }, [connectorId]);
 
+  // Reset run selection only when switching to a different pipeline
+  useEffect(() => {
+    setSelectedRunId(null);
+  }, [id]);
+
   // Handle individual pipeline detail fetch
   useEffect(() => {
-    // Reset run selection when pipeline context changes
-    setSelectedRunId(null);
-
     if (!id) {
       setSelectedPipeline(null);
       return;
     }
 
+    let isCurrent = true;
+
     const fetchDetail = async () => {
-      setLoadingDetail(true);
+      if (!selectedPipeline || String(selectedPipeline.id) !== String(id)) {
+        setLoadingDetail(true);
+      }
       try {
         const data = await api.pipeline(id);
-        setSelectedPipeline(data);
+        if (isCurrent) setSelectedPipeline(data);
       } catch (err) {
         console.error("Failed to fetch pipeline detail:", err);
-        // Fallback to local search if API fails
-        const found =
-          localPipelines.find((p) => String(p.id) === String(id)) ||
-          state.pipelines.find((p) => String(p.id) === String(id));
-        if (found) setSelectedPipeline(found);
+        if (isCurrent) {
+          const found =
+            localPipelines.find((p) => String(p.id) === String(id)) ||
+            state.pipelines.find((p) => String(p.id) === String(id));
+          if (found) setSelectedPipeline(found);
+        }
       } finally {
-        setLoadingDetail(false);
+        if (isCurrent) setLoadingDetail(false);
       }
     };
 
     fetchDetail();
-  }, [id, localPipelines, state.pipelines]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [id]);
 
   const connectorMap = useMemo(
     () => Object.fromEntries(connectors.map((c) => [c.id, c])),

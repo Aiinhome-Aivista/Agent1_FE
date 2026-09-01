@@ -22,6 +22,7 @@ import {
   Copy,
   Check,
   Target,
+  Zap,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Header } from "../Header";
@@ -718,6 +719,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
   const raw = analysis.raw_response || {};
   const explain = raw.confidence_explanation as
     | {
+        score?: number;
         level?: string;
         headline?: string;
         factors?: {
@@ -726,6 +728,8 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           contribution: number;
           polarity: "positive" | "negative" | "neutral";
         }[];
+        evidence_available?: string[];
+        evidence_missing?: string[];
       }
     | undefined;
 
@@ -760,17 +764,85 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
   const errorDetails = raw.error_details || "";
   const contributingFactors = (Array.isArray(raw.contributing_factors) ? raw.contributing_factors : []).map(cleanItemText).filter(Boolean);
   const failureMechanism = raw.failure_mechanism || "";
-  const impact = raw.impact || "";
+  const impact = typeof raw.impact === "string" ? raw.impact : (raw.impact?.description || "");
+  const impactData = raw.impact_data as {
+    description?: string;
+    operational_impact?: string;
+    records_affected?: number | null;
+    total_records?: number | null;
+    affected_ids?: string[];
+    risk_level?: string;
+  } | undefined;
   const longTermPrevention = raw.long_term_prevention || "";
   const recommendedActions = (Array.isArray(raw.recommended_actions) ? raw.recommended_actions : []).map(cleanItemText).filter(Boolean);
+
+  // ── New: Blast Radius, Root Cause Classification, Timeline ────────────────
+  const blastRadius = raw.blast_radius as {
+    records_affected?: number | null;
+    total_records?: number | null;
+    pct_affected?: number | null;
+    failure_categories_count?: number;
+    failure_categories?: string[];
+    severity_level?: string;
+    severity_reason?: string;
+    downstream_impact?: string;
+  } | null | undefined;
+
+  const rcClassification = raw.root_cause_classification as {
+    tier_a_verified_fact?: {
+      statement?: string;
+      evidence?: string[];
+      status?: string;
+    };
+    tier_b_deterministic_inference?: {
+      statement?: string;
+      description?: string;
+      calculation?: string;
+    };
+    tier_c_hypothesis?: {
+      statement: string;
+      confidence_label: string;
+      verification_step: string;
+    }[];
+    tier_d_suggested_investigations?: {
+      area: string;
+      action: string;
+      why: string;
+    }[];
+    classification_note?: string;
+    verified_cause?: { type?: string; description?: string; evidence?: string[] };
+    likely_cause?: { type?: string; description?: string; confidence_note?: string } | null;
+    contributing?: string[];
+    downstream_symptoms?: string[];
+  } | null | undefined;
+
+  const telemetryCompleteness = raw.telemetry_completeness as {
+    level?: string;
+    is_generic?: boolean;
+    error_line_count?: number;
+    detail_chars?: number;
+    reason?: string;
+    refetched?: boolean;
+  } | null | undefined;
+
+  const investigationTimeline = (Array.isArray(raw.investigation_timeline) ? raw.investigation_timeline : []) as {
+    label: string;
+    status: string;
+    detail: string;
+    icon: string;
+  }[];
 
   const immediateFixes: {
     step: number;
     title: string;
     action: string;
     priority: "REQUIRED" | "OPTIONAL" | string;
+    why?: string;
+    evidence_source?: string;
     expected_outcome?: string;
     validation?: string;
+    automation_safety?: string;
+    automation_safety_badge?: string;
   }[] = (() => {
     if (Array.isArray(raw.immediate_fix) && raw.immediate_fix.length > 0) {
       return raw.immediate_fix.map((item: any, idx: number) => ({
@@ -778,8 +850,12 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         title: String(item.title || `Step ${idx + 1}`),
         action: String(item.action || item.description || ""),
         priority: "REQUIRED",
+        why: item.why || undefined,
+        evidence_source: item.evidence_source || undefined,
         expected_outcome: item.expected_outcome || undefined,
         validation: item.validation || undefined,
+        automation_safety: item.automation_safety || undefined,
+        automation_safety_badge: item.automation_safety_badge || undefined,
       }));
     }
     if (Array.isArray(raw.known_fix) && raw.known_fix.length > 0) {
@@ -790,8 +866,12 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           title: String(item.title || item.action || `Step ${idx + 1}`),
           action: String(item.action || item.description || item.details || ""),
           priority: "REQUIRED",
+          why: item.why || undefined,
+          evidence_source: item.evidence_source || undefined,
           expected_outcome: item.expected_outcome || undefined,
           validation: item.validation || undefined,
+          automation_safety: item.automation_safety || undefined,
+          automation_safety_badge: item.automation_safety_badge || undefined,
         }));
     }
     return [];
@@ -802,8 +882,12 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
     title: string;
     action: string;
     priority: "REQUIRED" | "OPTIONAL" | string;
+    why?: string;
+    evidence_source?: string;
     expected_outcome?: string;
     validation?: string;
+    automation_safety?: string;
+    automation_safety_badge?: string;
   }[] = (() => {
     if (Array.isArray(raw.optional_improvements) && raw.optional_improvements.length > 0) {
       return raw.optional_improvements.map((item: any, idx: number) => ({
@@ -811,8 +895,12 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         title: String(item.title || `Improvement ${idx + 1}`),
         action: String(item.action || item.description || ""),
         priority: "OPTIONAL",
+        why: item.why || undefined,
+        evidence_source: item.evidence_source || undefined,
         expected_outcome: item.expected_outcome || undefined,
         validation: item.validation || undefined,
+        automation_safety: item.automation_safety || undefined,
+        automation_safety_badge: item.automation_safety_badge || undefined,
       }));
     }
     if (Array.isArray(raw.known_fix) && raw.known_fix.length > 0) {
@@ -912,6 +1000,48 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
       </div>
 
       <div className="p-6 space-y-6">
+        {/* ── Diagnosis Status Banner ───────────────────────────────────── */}
+        {(() => {
+          const level = telemetryCompleteness?.level;
+          const refetched = telemetryCompleteness?.refetched;
+          if (!level || level === "UNKNOWN") return null;
+
+          const bannerMap: Record<string, { bg: string; border: string; dot: string; label: string; icon: React.ReactNode }> = {
+            COMPLETE: {
+              bg: "bg-emerald-500/10",
+              border: "border-emerald-500/30",
+              dot: "bg-emerald-400",
+              label: "Complete Diagnosis",
+              icon: <CheckCircle2 size={13} className="text-emerald-400" />,
+            },
+            PARTIAL: {
+              bg: "bg-amber-500/10",
+              border: "border-amber-500/30",
+              dot: "bg-amber-400",
+              label: "Partial Diagnosis",
+              icon: <AlertTriangle size={13} className="text-amber-400" />,
+            },
+            INSUFFICIENT: {
+              bg: "bg-rose-500/10",
+              border: "border-rose-500/30",
+              dot: "bg-rose-400",
+              label: "Insufficient Telemetry",
+              icon: <AlertTriangle size={13} className="text-rose-400" />,
+            },
+          };
+          const b = bannerMap[level] || bannerMap.PARTIAL;
+          return (
+            <div className={cn("flex items-center gap-3 px-4 py-2.5 rounded-xl border text-xs", b.bg, b.border)}>
+              {b.icon}
+              <span className="font-black uppercase tracking-widest text-app-primary text-[11px]">{b.label}</span>
+              {refetched && (
+                <span className="ml-1 text-[10px] font-bold text-sky-400 border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 rounded">Logs Re-fetched</span>
+              )}
+              <span className="ml-auto text-app-secondary text-[10px]">{telemetryCompleteness?.reason}</span>
+            </div>
+          );
+        })()}
+
         {/* Temporary Diagnosis Failure Alert */}
         {isDiagnosisFailed && (
           <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start gap-3">
@@ -977,16 +1107,66 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             </div>
 
             {explain && showWhy && (
-              <div className="bg-app-input border border-app-border/50 rounded-xl p-4 space-y-3 shadow-inner">
-                <div className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">
-                  Why confidence is {explain.level}
+              <div className="bg-app-input border border-app-border/50 rounded-xl p-4 space-y-4 shadow-inner">
+                <div>
+                  <div className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">
+                    Why confidence is {explain.level}
+                  </div>
+                  {explain.headline && (
+                    <p className="text-xs text-app-primary leading-relaxed mt-1 font-medium">
+                      {explain.headline}
+                    </p>
+                  )}
                 </div>
-                {explain.headline && (
-                  <p className="text-xs text-app-primary leading-relaxed">
-                    {explain.headline}
-                  </p>
+
+                {/* Evidence Checklist (Issue 7) */}
+                {((explain.evidence_available && explain.evidence_available.length > 0) || (explain.evidence_missing && explain.evidence_missing.length > 0)) && (
+                  <div className="p-3 rounded-lg bg-app-surface border border-app-border/60 space-y-2.5">
+                    <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest flex items-center justify-between">
+                      <span>Evidence Checklist</span>
+                      <span className="text-[9px] font-mono text-emerald-400 font-bold">
+                        {explain.evidence_available?.length || 0} Verified / {explain.evidence_missing?.length || 0} Missing
+                      </span>
+                    </div>
+
+                    {explain.evidence_available && explain.evidence_available.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                          <CheckCircle2 size={11} /> Verified Available Telemetry
+                        </div>
+                        <ul className="space-y-1 pl-1">
+                          {explain.evidence_available.map((ev, i) => (
+                            <li key={i} className="text-[11px] text-app-primary flex items-start gap-1.5 leading-relaxed">
+                              <span className="text-emerald-400 font-bold">✓</span>
+                              <span>{ev}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {explain.evidence_missing && explain.evidence_missing.length > 0 && (
+                      <div className="space-y-1.5 pt-1.5 border-t border-app-border/40">
+                        <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                          <AlertTriangle size={11} /> Missing Telemetry & Hypotheses
+                        </div>
+                        <ul className="space-y-1 pl-1">
+                          {explain.evidence_missing.map((ev, i) => (
+                            <li key={i} className="text-[11px] text-app-secondary flex items-start gap-1.5 leading-relaxed">
+                              <span className="text-amber-400 font-bold">✗</span>
+                              <span>{ev}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 )}
-                <div className="space-y-2.5">
+
+                <div className="space-y-2.5 pt-1 border-t border-app-border/40">
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">
+                    Confidence Weight Factors
+                  </div>
                   {(explain.factors || []).map((f, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <span
@@ -1034,6 +1214,35 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Investigation Timeline ────────────────────────────────────── */}
+        {investigationTimeline.length > 0 && (
+          <div className="rounded-xl border border-app-border/50 overflow-hidden bg-app-surface/40">
+            <div className="px-4 py-2.5 border-b border-app-border/50 flex items-center gap-2">
+              <Activity size={12} className="text-sky-400" />
+              <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">Investigation Timeline</span>
+            </div>
+            <div className="divide-y divide-app-border/30">
+              {investigationTimeline.map((step, i) => {
+                const iconMap: Record<string, React.ReactNode> = {
+                  check: <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />,
+                  x: <AlertTriangle size={13} className="text-rose-400 shrink-0" />,
+                  warn: <AlertTriangle size={13} className="text-amber-400 shrink-0" />,
+                  skip: <span className="w-3.5 h-3.5 rounded-full border border-app-border/60 inline-block shrink-0" />,
+                };
+                return (
+                  <div key={i} className="flex items-start gap-3 px-4 py-2.5">
+                    <div className="mt-0.5">{iconMap[step.icon] ?? iconMap.skip}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-bold text-app-primary">{step.label}</div>
+                      {step.detail && <div className="text-[10px] text-app-secondary mt-0.5 leading-relaxed">{step.detail}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -1093,15 +1302,58 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
 
             {/* Validation violation category breakdown */}
             {raw.validation_failures && Object.keys(raw.validation_failures).length > 0 && (
-              <div className="pt-2.5 border-t border-app-border/40 text-[11px] text-app-secondary flex items-start gap-2 flex-wrap">
-                <span className="font-bold text-app-primary">
-                  Category Violations ({raw.validation_violations_total || 7} total):
-                </span>
-                {Object.entries(raw.validation_failures).map(([cat, cnt], i) => (
-                  <span key={i} className="px-2 py-0.5 rounded bg-app-surface border border-app-border/50 text-app-primary font-mono text-[10px]">
-                    {cat.replace(/_/g, " ")}: <strong>{String(cnt)}</strong>
+              <div className="pt-2.5 border-t border-app-border/40 space-y-1.5">
+                <div className="text-[11px] text-app-secondary flex items-start gap-2 flex-wrap">
+                  <span className="font-bold text-app-primary">
+                    Category Violations ({raw.validation_violations_total || 7} total):
                   </span>
-                ))}
+                  {Object.entries(raw.validation_failures).map(([cat, cnt], i) => (
+                    <span key={i} className="px-2 py-0.5 rounded bg-app-surface border border-app-border/50 text-app-primary font-mono text-[10px]">
+                      {cat.replace(/_/g, " ")}: <strong>{String(cnt)}</strong>
+                    </span>
+                  ))}
+                </div>
+                {(raw.category_violation_explanation || raw.verified_facts?.category_violation_explanation) && (
+                  <p className="text-[10px] text-app-secondary/90 italic leading-relaxed pl-1">
+                    ℹ {raw.category_violation_explanation || raw.verified_facts?.category_violation_explanation}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Affected Record IDs (Raw + Unique + Duplicates) */}
+            {((Array.isArray(raw.affected_ids_raw) && raw.affected_ids_raw.length > 0) || (Array.isArray(raw.affected_ids_unique) && raw.affected_ids_unique.length > 0)) && (
+              <div className="pt-2.5 border-t border-app-border/40 space-y-1.5">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <span className="font-bold text-app-primary text-[11px]">
+                    Affected Entity IDs ({raw.affected_ids_unique?.length || raw.affected_ids_raw?.length} Unique, {raw.affected_ids_raw?.length || 0} Total):
+                  </span>
+                  {raw.affected_ids_duplicates && raw.affected_ids_duplicates.length > 0 && (
+                    <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                      Duplicate Instances: {raw.affected_ids_duplicates.join(", ")}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {(raw.affected_ids_raw || raw.affected_ids_unique || []).map((id: string, idx: number) => {
+                    const isDup = raw.affected_ids_duplicates?.includes(id);
+                    return (
+                      <span
+                        key={idx}
+                        className={cn(
+                          "px-2 py-0.5 rounded font-mono text-[10px] border transition-colors",
+                          isDup
+                            ? "bg-amber-500/10 text-amber-300 border-amber-500/30 font-bold"
+                            : "bg-app-surface border-app-border/60 text-app-primary"
+                        )}
+                        title={isDup ? `Record ${id} appears multiple times in batch failure telemetry` : undefined}
+                      >
+                        {id}
+                        {isDup && <span className="ml-1 text-[8px] text-amber-400 font-sans">(dup)</span>}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -1111,19 +1363,94 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                 <span className="p-1 rounded bg-emerald-500/10 text-emerald-400 mt-0.5 shrink-0">
                   <Target className="w-3.5 h-3.5" />
                 </span>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-app-primary text-[11px]">Recovery Success Criteria:</span>
-                    {typeof raw.recovery_success_criteria.allowed_invalid_count === "number" && (
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-[10px]">
-                        Target: {raw.recovery_success_criteria.comparison_operator || "<="} {raw.recovery_success_criteria.allowed_invalid_count} invalid records
-                      </span>
-                    )}
+                <div className="space-y-1 w-full">
+                  <div className="flex items-center gap-2 flex-wrap justify-between">
+                    <span className="font-bold text-app-primary text-[11px]">Recovery Target Criteria:</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {typeof raw.recovery_success_criteria.allowed_invalid_count === "number" && (
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-[10px]">
+                          Max Allowed: {raw.recovery_success_criteria.comparison_operator || "<="} {raw.recovery_success_criteria.allowed_invalid_count} records
+                        </span>
+                      )}
+                      {typeof raw.recovery_success_criteria.records_to_resolve === "number" && raw.recovery_success_criteria.records_to_resolve > 0 && (
+                        <span className="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono font-bold text-[10px]">
+                          Must Correct: ≥ {raw.recovery_success_criteria.records_to_resolve} records
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-[11px] text-app-secondary leading-relaxed">
                     {raw.recovery_success_criteria.message}
                   </p>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Blast Radius Card ─────────────────────────────────────────── */}
+        {blastRadius && (
+          <div className={cn(
+            "p-4 rounded-xl border space-y-3",
+            blastRadius.severity_level === "CRITICAL"
+              ? "bg-rose-500/10 border-rose-500/40"
+              : blastRadius.severity_level === "HIGH"
+                ? "bg-orange-500/10 border-orange-500/40"
+                : blastRadius.severity_level === "MEDIUM"
+                  ? "bg-amber-500/10 border-amber-500/40"
+                  : "bg-app-input border-app-border/50",
+          )}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap size={13} className={cn(
+                  blastRadius.severity_level === "CRITICAL" ? "text-rose-400"
+                    : blastRadius.severity_level === "HIGH" ? "text-orange-400"
+                      : blastRadius.severity_level === "MEDIUM" ? "text-amber-400"
+                        : "text-app-secondary"
+                )} />
+                <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">Blast Radius</span>
+              </div>
+              <span className={cn(
+                "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border",
+                blastRadius.severity_level === "CRITICAL"
+                  ? "text-rose-400 border-rose-500/40 bg-rose-500/10"
+                  : blastRadius.severity_level === "HIGH"
+                    ? "text-orange-400 border-orange-500/40 bg-orange-500/10"
+                    : blastRadius.severity_level === "MEDIUM"
+                      ? "text-amber-400 border-amber-500/40 bg-amber-500/10"
+                      : "text-app-secondary border-app-border bg-app-surface",
+              )}>
+                {blastRadius.severity_level ?? "UNKNOWN"}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              {blastRadius.records_affected != null && blastRadius.total_records != null && (
+                <div>
+                  <div className="text-[10px] text-app-secondary">Records Affected</div>
+                  <div className="font-mono font-bold text-app-primary">{blastRadius.records_affected}/{blastRadius.total_records}</div>
+                </div>
+              )}
+              {blastRadius.pct_affected != null && (
+                <div>
+                  <div className="text-[10px] text-app-secondary">% of Batch</div>
+                  <div className="font-mono font-bold text-app-primary">{Number(blastRadius.pct_affected).toFixed(1)}%</div>
+                </div>
+              )}
+              {(blastRadius.failure_categories_count ?? 0) > 0 && (
+                <div>
+                  <div className="text-[10px] text-app-secondary">Failure Categories</div>
+                  <div className="font-mono font-bold text-app-primary">{blastRadius.failure_categories_count}</div>
+                </div>
+              )}
+            </div>
+            {blastRadius.severity_reason && (
+              <div className="text-[11px] text-app-secondary leading-relaxed border-t border-app-border/40 pt-2">
+                {blastRadius.severity_reason}
+              </div>
+            )}
+            {blastRadius.downstream_impact && (
+              <div className="text-[11px] text-app-secondary leading-relaxed italic">
+                {blastRadius.downstream_impact}
               </div>
             )}
           </div>
@@ -1172,51 +1499,134 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
             return <StructuredAnalysis data={structuredData} />;
           }
 
-          const verifiedRootCause = raw.verified_root_cause || analysis.root_cause;
+          const verifiedRootCause = rcClassification?.tier_a_verified_fact?.statement || raw.verified_root_cause || analysis.root_cause;
+          const tierBInference = rcClassification?.tier_b_deterministic_inference;
+          const tierCHypotheses = rcClassification?.tier_c_hypothesis;
+          const tierDInvestigations = rcClassification?.tier_d_suggested_investigations;
           const inferredContributingCause = raw.inferred_contributing_cause;
 
           return (
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {/* Level A — Verified Fact */}
               {verifiedRootCause && (
                 <div>
                   <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      Verified Root Cause (Deterministic Evidence)
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      Level A — Verified Fact (Direct Telemetry)
                     </span>
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold">
-                      Verified Fact
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">
+                      Direct Telemetry
                     </span>
                   </div>
-                  <div className="text-sm text-app-primary bg-app-surface p-4 rounded-lg border border-app-border leading-relaxed font-sans">
-                    {verifiedRootCause
-                      .split(/\*\*(.*?)\*\*/g)
-                      .map((part: string, i: number) =>
-                        i % 2 === 1 ? (
-                          <strong key={i} className="font-bold text-app-primary">
-                            {part}
-                          </strong>
-                        ) : (
-                          part
-                        ),
-                      )}
+                  <div className="text-sm text-app-primary bg-app-surface p-4 rounded-xl border border-emerald-500/30 leading-relaxed font-sans space-y-2">
+                    <div>
+                      {verifiedRootCause
+                        .split(/\*\*(.*?)\*\*/g)
+                        .map((part: string, i: number) =>
+                          i % 2 === 1 ? (
+                            <strong key={i} className="font-bold text-app-primary">
+                              {part}
+                            </strong>
+                          ) : (
+                            part
+                          ),
+                        )}
+                    </div>
+                    {rcClassification?.tier_a_verified_fact?.evidence && rcClassification.tier_a_verified_fact.evidence.length > 0 && (
+                      <ul className="pt-2 border-t border-app-border/40 space-y-1">
+                        {rcClassification.tier_a_verified_fact.evidence.map((ev, i) => (
+                          <li key={i} className="text-xs text-app-secondary flex items-start gap-1.5">
+                            <span className="text-emerald-400">✓</span>
+                            <span>{ev}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               )}
 
-              {inferredContributingCause && (
+              {/* Level B — Deterministic Inference */}
+              {tierBInference && (
                 <div>
                   <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-                      Inferred Contributing Cause (Reasoning & Analysis)
+                      <span className="w-2 h-2 rounded-full bg-sky-400" />
+                      Level B — Deterministic Inference (Mathematical / Logical Deduction)
                     </span>
-                    <span className="text-[10px] font-mono text-sky-400 font-bold">
-                      Inferred
+                    <span className="text-[10px] font-mono text-sky-400 font-bold px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/30">
+                      Deduction
                     </span>
                   </div>
-                  <div className="text-sm text-app-secondary bg-app-surface/60 p-4 rounded-lg border border-sky-500/20 leading-relaxed font-sans italic">
-                    {inferredContributingCause}
+                  <div className="text-sm text-app-primary bg-sky-500/5 p-4 rounded-xl border border-sky-500/30 leading-relaxed font-sans space-y-1.5">
+                    <div>{tierBInference.statement}</div>
+                    {tierBInference.calculation && (
+                      <div className="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 px-2 py-1 rounded inline-block">
+                        {tierBInference.calculation}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Level C — Hypotheses (Potential Upstream Cause) */}
+              {((tierCHypotheses && tierCHypotheses.length > 0) || inferredContributingCause) && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-400" />
+                      Level C — Hypotheses (Potential Upstream Causes)
+                    </span>
+                    <span className="text-[10px] font-mono text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">
+                      Unproven (Requires Verification)
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {tierCHypotheses && tierCHypotheses.length > 0 ? (
+                      tierCHypotheses.map((h, i) => (
+                        <div key={i} className="text-xs text-app-secondary bg-app-surface/60 p-3 rounded-xl border border-amber-500/20 leading-relaxed space-y-1">
+                          <div className="text-app-primary font-medium">{h.statement}</div>
+                          {h.verification_step && (
+                            <div className="text-[11px] text-amber-400/90 flex items-center gap-1">
+                              <span>🔍 Verification:</span>
+                              <span>{h.verification_step}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-app-secondary bg-app-surface/60 p-4 rounded-xl border border-amber-500/20 leading-relaxed font-sans italic">
+                        {inferredContributingCause}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Level D — Suggested Investigations */}
+              {tierDInvestigations && tierDInvestigations.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-400" />
+                      Level D — Suggested Operational Investigations
+                    </span>
+                    <span className="text-[10px] font-mono text-purple-400 font-bold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/30">
+                      Investigation Only
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {tierDInvestigations.map((inv, i) => (
+                      <div key={i} className="p-3 rounded-xl bg-app-surface/40 border border-purple-500/20 space-y-1 text-xs">
+                        <div className="font-bold text-app-primary flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                          {inv.area}
+                        </div>
+                        <div className="text-app-secondary leading-snug">{inv.action}</div>
+                        <div className="text-[10px] text-purple-400/90 italic pt-0.5">Why: {inv.why}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1298,20 +1708,50 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           </div>
         )}
 
-        {impact && (
+        {/* Structured Impact Assessment (Issue 1) */}
+        {(impact || impactData) && (
           <div>
-            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2">
-              Impact
+            <div className="text-[10px] font-bold text-app-secondary uppercase tracking-widest mb-2 flex items-center justify-between">
+              <span>Impact Assessment</span>
+              {impactData?.risk_level && (
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border",
+                  impactData.risk_level === "CRITICAL"
+                    ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                    : impactData.risk_level === "HIGH"
+                      ? "bg-orange-500/10 text-orange-400 border-orange-500/30"
+                      : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                )}>
+                  {impactData.risk_level} RISK
+                </span>
+              )}
             </div>
-            <div className="text-sm text-app-primary whitespace-pre-wrap bg-amber-500/10 p-4 rounded-lg border border-amber-500/30 leading-relaxed">
-              {impact.split(/\*\*(.*?)\*\*/g).map((part: string, i: number) =>
-                i % 2 === 1 ? (
-                  <strong key={i} className="font-bold text-app-primary">
-                    {part}
-                  </strong>
-                ) : (
-                  part
-                ),
+            <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-2.5">
+              <div className="text-sm text-app-primary leading-relaxed font-sans">
+                {(impactData?.operational_impact || impactData?.description || impact)
+                  .split(/\*\*(.*?)\*\*/g)
+                  .map((part: string, i: number) =>
+                    i % 2 === 1 ? (
+                      <strong key={i} className="font-bold text-app-primary">
+                        {part}
+                      </strong>
+                    ) : (
+                      part
+                    ),
+                  )}
+              </div>
+
+              {impactData?.affected_ids && impactData.affected_ids.length > 0 && (
+                <div className="pt-2 border-t border-app-border/40 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-bold text-app-secondary uppercase tracking-wider mr-1">
+                    Directly Affected Entities ({impactData.affected_ids.length}):
+                  </span>
+                  {impactData.affected_ids.map((id, idx) => (
+                    <span key={idx} className="px-2 py-0.5 rounded bg-app-surface border border-app-border/60 text-app-primary font-mono text-[10px]">
+                      {id}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -1327,18 +1767,38 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
               </span>
             </div>
             <div className="space-y-3">
-              {immediateFixes.map((step, idx) => (
+              {immediateFixes.map((step, idx) => {
+                const autoSafety = (step as any).automation_safety as { can_automate?: boolean; risk_level?: string; reason?: string } | string | undefined;
+                const canAutomate = typeof autoSafety === "object" ? autoSafety.can_automate : (typeof autoSafety === "string" && (autoSafety.toLowerCase().includes("safe") || autoSafety.toLowerCase().includes("automatic")));
+                const safetyLabel = typeof autoSafety === "object" ? (autoSafety.can_automate ? "⚡ Safe to Automate" : autoSafety.risk_level === "high" ? "⚠ Manual Required" : "👁 Needs Review") : (autoSafety || "👁 Requires Approval");
+
+                return (
                 <div
                   key={idx}
-                  className="p-4 rounded-xl border text-sm leading-relaxed transition-all shadow-sm bg-emerald-500/5 border-emerald-500/30 border-l-4 border-l-emerald-500"
+                  className="p-4 rounded-xl border text-sm leading-relaxed transition-all shadow-sm bg-emerald-500/5 border-emerald-500/30 border-l-4 border-l-emerald-500 space-y-2"
                 >
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="w-5 h-5 rounded-full bg-app-input border border-app-border flex items-center justify-center text-[10px] font-bold text-app-primary shrink-0">
                       {step.step || idx + 1}
                     </span>
                     <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       Required Immediate Action
                     </span>
+                    {step.evidence_source && (
+                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-app-surface text-app-secondary border border-app-border/50">
+                        {step.evidence_source}
+                      </span>
+                    )}
+                    {autoSafety && (
+                      <span className={cn(
+                        "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border",
+                        canAutomate
+                          ? "bg-sky-500/10 text-sky-400 border-sky-500/20"
+                          : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                      )}>
+                        {safetyLabel}
+                      </span>
+                    )}
                     <span className="font-bold text-app-primary text-sm">
                       {step.title}
                     </span>
@@ -1358,8 +1818,15 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                       )}
                   </div>
 
+                  {step.why && (
+                    <div className="ml-7 text-xs text-app-secondary leading-snug">
+                      <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1 font-bold">Why:</span>
+                      {step.why}
+                    </div>
+                  )}
+
                   {step.expected_outcome && (
-                    <div className="mt-2.5 ml-7 pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-emerald-400 font-medium">
+                    <div className="ml-7 pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-emerald-400 font-medium">
                       <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-emerald-400" />
                       <div>
                         <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Expected Outcome:</span>
@@ -1369,13 +1836,13 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                   )}
 
                   {step.validation && (
-                    <div className="mt-1.5 ml-7 flex items-start gap-2 text-xs text-sky-400 font-medium">
+                    <div className="ml-7 flex items-start gap-2 text-xs text-sky-400 font-medium">
                       <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Validation:</span>
                       {step.validation}
                     </div>
                   )}
                 </div>
-              ))}
+              ); })}
             </div>
           </div>
         )}
@@ -1393,15 +1860,20 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
               {optionalImprovements.map((step, idx) => (
                 <div
                   key={idx}
-                  className="p-4 rounded-xl border text-sm leading-relaxed transition-all shadow-sm bg-sky-500/5 border-sky-500/30 border-l-4 border-l-sky-500"
+                  className="p-4 rounded-xl border text-sm leading-relaxed transition-all shadow-sm bg-sky-500/5 border-sky-500/30 border-l-4 border-l-sky-500 space-y-2"
                 >
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="w-5 h-5 rounded-full bg-app-input border border-app-border flex items-center justify-center text-[10px] font-bold text-app-primary shrink-0">
                       {step.step || idx + 1}
                     </span>
                     <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
                       Optional Runbook Improvement
                     </span>
+                    {step.evidence_source && (
+                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-app-surface text-app-secondary border border-app-border/50">
+                        {step.evidence_source}
+                      </span>
+                    )}
                     <span className="font-bold text-app-primary text-sm">
                       {step.title}
                     </span>
@@ -1411,8 +1883,15 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                     {step.action}
                   </div>
 
+                  {step.why && (
+                    <div className="ml-7 text-xs text-app-secondary leading-snug">
+                      <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1 font-bold">Why:</span>
+                      {step.why}
+                    </div>
+                  )}
+
                   {step.expected_outcome && (
-                    <div className="mt-2.5 ml-7 pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-sky-300 font-medium">
+                    <div className="ml-7 pt-2 border-t border-app-border/40 flex items-start gap-2 text-xs text-sky-300 font-medium">
                       <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-sky-400" />
                       <div>
                         <span className="text-app-secondary text-[11px] uppercase tracking-wider mr-1">Expected Outcome:</span>

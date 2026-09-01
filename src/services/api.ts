@@ -50,13 +50,18 @@ export const apiEvents = {
   },
 };
 
+export interface RequestOptions {
+  silent?: boolean;
+}
+
 function updateLoading(delta: number) {
-  activeRequests += delta;
+  activeRequests = Math.max(0, activeRequests + delta);
   loadingListener?.(activeRequests > 0);
 }
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  updateLoading(1);
+async function req<T>(path: string, init?: RequestInit, opts?: RequestOptions): Promise<T> {
+  const isSilent = opts?.silent ?? false;
+  if (!isSilent) updateLoading(1);
   try {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -102,7 +107,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     if (res.status === 204) return undefined as unknown as T;
     return res.json() as Promise<T>;
   } finally {
-    updateLoading(-1);
+    if (!isSilent) updateLoading(-1);
   }
 }
 
@@ -154,11 +159,11 @@ export const api = {
   me: () => req<{ id: string; email: string; is_admin: boolean }>("/auth/me"),
   health: () => req<{ status: string; env: string; llm: string }>("/health"),
 
-  pipelines: (params?: { connector_id?: string | number }) => {
+  pipelines: (params?: { connector_id?: string | number }, opts?: RequestOptions) => {
     const q = params?.connector_id
       ? `?connector_id=${params.connector_id}`
       : "";
-    return req<Pipeline[]>(`/pipelines${q}`);
+    return req<Pipeline[]>(`/pipelines${q}`, undefined, opts);
   },
   pipeline: (id: string) => req<Pipeline>(`/pipelines/${id}`),
   run: (id: string) => req<any>(`/runs/${id}`),
@@ -169,8 +174,8 @@ export const api = {
       method: "POST",
     }),
 
-  incidents: (tab?: "open" | "closed" | "all") =>
-    req<Incident[]>(`/incidents${tab ? `?tab=${tab}` : ""}`),
+  incidents: (tab?: "open" | "closed" | "all", opts?: RequestOptions) =>
+    req<Incident[]>(`/incidents${tab ? `?tab=${tab}` : ""}`, undefined, opts),
   incident: (id: string) => req<Incident>(`/incidents/${id}`),
   incidentEvents: (id: string | number) =>
     req<IncidentEvent[]>(`/incidents/${id}/events`),
@@ -220,7 +225,7 @@ export const api = {
       body: JSON.stringify(entry),
     }),
 
-  audit: (limit = 200) => req<LogEntry[]>(`/audit?limit=${limit}`),
+  audit: (limit = 200, opts?: RequestOptions) => req<LogEntry[]>(`/audit?limit=${limit}`, undefined, opts),
   connectors: () => req<Connector[]>("/connectors"),
   connectorTypes: () => req<ConnectorType[]>("/connectors/types"),
   getConnector: (id: string) => req<ConnectorDetail>(`/connectors/${id}`),

@@ -17,7 +17,9 @@ interface State {
 type Action =
   | { type: 'snapshot'; payload: { pipelines: Pipeline[]; incidents: Incident[]; agents: AgentStatus[]; simulating: boolean } }
   | { type: 'pipelines'; payload: Pipeline[] }
+  | { type: 'incidents'; payload: Incident[] }
   | { type: 'incident'; payload: Incident }
+  | { type: 'logs'; payload: LogEntry[] }
   | { type: 'log'; payload: LogEntry }
   | { type: 'agents'; payload: AgentStatus[] }
   | { type: 'agent_started'; payload: { role: string; name: string; last_action: string } }
@@ -49,6 +51,8 @@ function reducer(state: State, action: Action): State {
       };
     case 'pipelines':
       return { ...state, pipelines: action.payload };
+    case 'incidents':
+      return { ...state, incidents: action.payload };
     case 'incident': {
       const incoming = action.payload;
       const idx = state.incidents.findIndex((i) => i.id === incoming.id);
@@ -57,6 +61,11 @@ function reducer(state: State, action: Action): State {
           ? state.incidents.map((i, k) => (k === idx ? incoming : i))
           : [incoming, ...state.incidents];
       return { ...state, incidents };
+    }
+    case 'logs': {
+      const seen = new Set(state.logs.map((l) => l.id));
+      const incoming = action.payload.filter((l) => !seen.has(l.id));
+      return { ...state, logs: [...state.logs, ...incoming].slice(0, 300) };
     }
     case 'log':
       return { ...state, logs: [action.payload, ...state.logs].slice(0, 300) };
@@ -113,18 +122,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const reconnectTimerRef = useRef<number | null>(null);
 
   // Bootstrap REST
-  const bootstrap = async () => {
+  const bootstrap = async (silent = false) => {
     // Fetch each independently to prevent one 404 from breaking the whole app
-    api.pipelines()
+    api.pipelines(undefined, { silent })
       .then(pipelines => dispatch({ type: 'pipelines', payload: pipelines }))
       .catch(e => console.warn('Pipelines fetch failed', e));
 
+    api.incidents('all', { silent })
+      .then(incidents => dispatch({ type: 'incidents', payload: incidents }))
+      .catch(e => console.warn('Incidents fetch failed', e));
 
-    /* 
-    api.agents()
-      .then(agents => dispatch({ type: 'agents', payload: agents }))
-      .catch(e => console.warn('Agents fetch failed', e)); 
-    */
+    api.audit(50, { silent })
+      .then(auditLogs => {
+        const normalized: LogEntry[] = (auditLogs || []).map((l: any) => ({
+          id: String(l.id),
+          time: l.ts || l.time || new Date().toISOString(),
+          msg: l.msg || "",
+          type: (l.type || "info").toLowerCase() as any,
+          agent_role: l.agent_role,
+          incident_id: l.incident_id,
+        }));
+        dispatch({ type: 'logs', payload: normalized });
+      })
+      .catch(e => console.warn('Audit logs fetch failed', e));
   };
 
   // WebSocket lifecycle
@@ -162,25 +182,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
     };
 
-    const handleEvent = (msg: { event: string; payload: any }) => {
+    const handleEvent = (msg: { event: string; payload?: any; data?: any }) => {
+      const payload = msg.payload ?? msg.data;
       switch (msg.event) {
         case 'snapshot':
-          dispatch({ type: 'snapshot', payload: msg.payload });
+          dispatch({ type: 'snapshot', payload });
           break;
         case 'pipelines_update':
-          dispatch({ type: 'pipelines', payload: msg.payload });
+        case 'pipeline.status_updated':
+        case 'pipeline.created':
+        case 'pipeline.updated':
+          if (Array.isArray(payload)) {
+            dispatch({ type: 'pipelines', payload });
+          } else {
+            api.pipelines(undefined, { silent: true }).then(p => dispatch({ type: 'pipelines', payload: p })).catch(() => {});
+          }
           break;
+        case 'incident':
         case 'incident_update':
-          dispatch({ type: 'incident', payload: msg.payload });
+        case 'incident.created':
+        case 'incident.updated':
+          if (payload && typeof payload === 'object' && 'id' in payload) {
+            dispatch({ type: 'incident', payload });
+          } else {
+            api.incidents('all', { silent: true }).then(incs => dispatch({ type: 'incidents', payload: incs })).catch(() => {});
+          }
           break;
         case 'log':
-          dispatch({ type: 'log', payload: msg.payload });
+        case 'logs.updated':
+          if (payload && typeof payload === 'object') dispatch({ type: 'log', payload });
           break;
         case 'agent_started':
-          dispatch({ type: 'agent_started', payload: msg.payload });
+          if (payload) dispatch({ type: 'agent_started', payload });
           break;
         case 'agent_completed':
-          dispatch({ type: 'agent_completed', payload: msg.payload });
+          if (payload) dispatch({ type: 'agent_completed', payload });
           break;
       }
     };
@@ -190,7 +226,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'loading', payload: loading });
     });
 
-    bootstrap();
+    bootstrap(false);
     connect();
 
     return () => {
@@ -202,19 +238,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Keep agent statuses fresh (poll once every 30s as a safety net)
+  // Smart background sync:
+  // - Polls every 20s as a safety fallback when the tab is visible (silent = true)
+  // - Pauses when the browser tab is hidden to save battery & network bandwidth
+  // - Instantly refetches silently when the user switches back to the tab
+  // - Live updates arrive instantly via WebSocket
   useEffect(() => {
-    /* 
-    const t = window.setInterval(async () => {
-      try {
-        const agents = await api.agents();
-        dispatch({ type: 'agents', payload: agents });
-      } catch {
-        // ignore 
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        bootstrap(true);
       }
-    }, 30000);
-    return () => window.clearInterval(t);
-    */
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    const t = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        bootstrap(true);
+      }
+    }, 20000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.clearInterval(t);
+    };
   }, []);
 
   const triggerIncident = async () => {

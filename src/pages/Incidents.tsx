@@ -93,9 +93,14 @@ function bestSummary(i: Incident): string {
 // ─────────────────────────────────────────────────────────────────────
 
 export function IncidentsPage() {
-  const { state } = useStore();
+  const { state, refresh } = useStore();
   const { id: routeId } = useParams();
   const navigate = useNavigate();
+
+  // Refresh on tab mount (live updates stream over WebSocket & 20s visibility-aware background sync)
+  useEffect(() => {
+    refresh();
+  }, []);
 
   const [filter, setFilter] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");

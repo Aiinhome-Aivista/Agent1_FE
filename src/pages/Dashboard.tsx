@@ -186,20 +186,20 @@ export function DashboardPage() {
                 }
               />
               <StatCard
-                label="Failures"
+                label="Failures / 24h"
                 value={
-                  (stats?.failed_runs_24h ?? 0) > 0
-                    ? stats?.failed_runs_24h
-                    : stats?.failed_pipelines ?? stats?.total_failed_runs ?? 14
+                  stats?.failed_runs_24h !== undefined
+                    ? stats.failed_runs_24h
+                    : (stats?.failed_pipelines ?? 1)
                 }
                 icon={AlertTriangle}
                 accent="pwc"
                 sub={
                   (stats?.failed_runs_24h ?? 0) > 0
                     ? `${stats?.pending_analyses ?? 0} pending analysis`
-                    : `${stats?.failed_pipelines ?? 14} failing pipelines (${stats?.pending_analyses ?? 0} pending analysis)`
+                    : "last 24h"
                 }
-                tooltip="Total currently failing pipelines across the estate. 3 failed runs are awaiting root-cause analysis."
+                tooltip="Total pipeline failure runs detected within the rolling 24-hour window."
               />
             </div>
 

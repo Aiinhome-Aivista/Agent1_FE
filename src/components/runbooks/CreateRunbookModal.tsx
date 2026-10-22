@@ -27,6 +27,8 @@ interface Props {
 
 type Phase = "pick" | "analyzing" | "review";
 
+const RELEVANCE_THRESHOLD = 50;
+
 /**
  * Two-phase wizard:
  *   pick      → user picks a file
@@ -321,20 +323,20 @@ export function CreateRunbookModal({ open, onClose, onSaved }: Props) {
                   {suggestion?.relevance_score !== undefined && (
                     <div
                       className={`text-[11px] px-3 py-2 rounded-lg flex items-start gap-2 border ${
-                        suggestion.relevance_score >= 75
+                        suggestion.relevance_score >= RELEVANCE_THRESHOLD
                           ? "bg-app-surface border-emerald-500/30 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]"
                           : "bg-app-surface border-rose-500/30 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]"
                       }`}
                     >
-                      {suggestion.relevance_score >= 75 ? (
+                      {suggestion.relevance_score >= RELEVANCE_THRESHOLD ? (
                         <Check className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-500" />
                       ) : (
                         <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-500" />
                       )}
                       <span>
                         <strong>Relevance Score: {suggestion.relevance_score}/100</strong>
-                        {suggestion.relevance_score < 75
-                          ? " — Document relevance is below the 75 threshold. Uploading is disabled."
+                        {suggestion.relevance_score < RELEVANCE_THRESHOLD
+                          ? ` — Document relevance is below the ${RELEVANCE_THRESHOLD} threshold. Uploading is disabled.`
                           : " — Good quality document detected. Ready for indexing."}
                       </span>
                     </div>
@@ -468,7 +470,7 @@ export function CreateRunbookModal({ open, onClose, onSaved }: Props) {
                   <button
                     type="button"
                     onClick={() => handleSubmit()}
-                    disabled={submitting || (suggestion?.relevance_score !== undefined && suggestion.relevance_score < 75)}
+                    disabled={submitting || (suggestion?.relevance_score !== undefined && suggestion.relevance_score < RELEVANCE_THRESHOLD)}
                     className="px-5 py-2 bg-app-brand hover:bg-[#E04B0E] text-white shadow-md hover:shadow-[0_4px_20px_rgba(255,90,20,0.2)] text-xs font-bold uppercase tracking-widest rounded-lg shadow-md transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 disabled:hover:bg-app-brand flex items-center gap-2"
                   >
                     {submitting ? (

@@ -952,8 +952,8 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         action: String(item.action || item.description || ""),
         summary: item.summary || item.action || item.description || "",
         priority: "REQUIRED",
-        priority_code: item.priority_code || item.priority_level || `P${idx}`,
-        priority_level: item.priority_level || item.priority_code || `P${idx}`,
+        priority_code: item.priority_code || item.priority_level || (raw.immediate_fix?.length === 1 ? "P1" : `P${idx}`),
+        priority_level: item.priority_level || item.priority_code || (raw.immediate_fix?.length === 1 ? "P1" : `P${idx}`),
         actionability: item.actionability || (item.fix_readiness === "READY_TO_FIX" ? "DIRECT_FIX" : "INVESTIGATION_REQUIRED"),
         recommendation_type: item.recommendation_type || (item.fix_readiness === "READY_TO_FIX" ? "Direct Action" : "Investigation Required"),
         supported_by: item.supported_by || "✓ Verified Task Output",
@@ -988,8 +988,8 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           action: String(item.action || item.description || item.details || ""),
           summary: item.summary || item.action || item.description || "",
           priority: "REQUIRED",
-          priority_code: item.priority_code || item.priority_level || `P${idx}`,
-          priority_level: item.priority_level || item.priority_code || `P${idx}`,
+          priority_code: item.priority_code || item.priority_level || (raw.known_fix?.length === 1 ? "P1" : `P${idx}`),
+          priority_level: item.priority_level || item.priority_code || (raw.known_fix?.length === 1 ? "P1" : `P${idx}`),
           actionability: item.actionability || "INVESTIGATION_REQUIRED",
           recommendation_type: item.recommendation_type || "Investigation Required",
           supported_by: item.supported_by || "✓ Verified Task Output",
@@ -1018,12 +1018,14 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
     return [];
   })();
 
-  const p0SafetyCheck = allImmediateFixes.find(
-    (item) => item.priority_code === "P0" || item.priority_level === "P0" || item.title.startsWith("P0")
-  );
+  const p0SafetyCheck = allImmediateFixes.length > 1
+    ? allImmediateFixes.find(
+        (item) => item.priority_code === "P0" || item.priority_level === "P0" || item.title.startsWith("P0")
+      )
+    : undefined;
 
   const suggestedFixes = allImmediateFixes.filter(
-    (item) => !(item.priority_code === "P0" || item.priority_level === "P0" || item.title.startsWith("P0"))
+    (item) => item !== p0SafetyCheck
   );
 
   const immediateFixes = allImmediateFixes;
@@ -1862,7 +1864,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* ── SECTION 4: SUGGESTED FIX ─────────────────────────────────── */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {suggestedFixes.length > 0 && (
+        {(suggestedFixes.length > 0 || !!nextBestAction || !!analysis.suggested_fix) && (
           <div
             id="sec-suggested-fix"
             className="p-5 sm:p-6 rounded-xl bg-app-surface border border-app-border space-y-6 shadow-sm"
@@ -1877,7 +1879,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                 </p>
               </div>
               <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full bg-app-input text-app-secondary border border-app-border">
-                {suggestedFixes.length} Prioritized Action{suggestedFixes.length !== 1 ? "s" : ""}
+                {Math.max(suggestedFixes.length, nextBestAction ? 1 : 0)} Prioritized Action{Math.max(suggestedFixes.length, nextBestAction ? 1 : 0) !== 1 ? "s" : ""}
               </span>
             </div>
 
@@ -2220,6 +2222,18 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Fallback plain-text fix if structured action was not parsed */}
+            {!nextBestAction && (analysis.suggested_fix || raw.suggested_fix) && (
+              <div className="p-4 rounded-xl bg-app-surface border border-app-border space-y-2">
+                <div className="text-xs font-bold text-amber-500 uppercase tracking-wider">
+                  Remediation Instructions
+                </div>
+                <div className="text-xs sm:text-sm text-app-primary whitespace-pre-wrap leading-relaxed font-sans">
+                  {analysis.suggested_fix || raw.suggested_fix}
                 </div>
               </div>
             )}

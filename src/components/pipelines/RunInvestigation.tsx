@@ -1127,6 +1127,7 @@ function AnalysisPanel({ analysis }: { analysis: any }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
+
           <span className="text-[10px] font-bold text-app-secondary uppercase tracking-widest">
             Confidence
           </span>

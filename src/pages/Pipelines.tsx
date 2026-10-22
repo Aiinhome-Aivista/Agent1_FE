@@ -83,6 +83,13 @@ export function PipelinesPage() {
     handleRefresh();
   }, [connectorId]);
 
+  // Keep localPipelines updated in real-time whenever state.pipelines updates from WebSockets/store
+  useEffect(() => {
+    if (!connectorId && state.pipelines && state.pipelines.length > 0) {
+      setLocalPipelines(state.pipelines);
+    }
+  }, [state.pipelines, connectorId]);
+
   // Reset run selection only when switching to a different pipeline
   useEffect(() => {
     setSelectedRunId(null);

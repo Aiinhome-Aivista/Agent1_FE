@@ -192,6 +192,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         case 'pipeline.status_updated':
         case 'pipeline.created':
         case 'pipeline.updated':
+        case 'run.updated':
+        case 'analysis.ready':
+        case 'connector.synced':
           if (Array.isArray(payload)) {
             dispatch({ type: 'pipelines', payload });
           } else {
